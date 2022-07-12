@@ -1,3 +1,5 @@
+pub mod serializer;
+
 #[cfg(test)]
 mod tests {
     #[test]
