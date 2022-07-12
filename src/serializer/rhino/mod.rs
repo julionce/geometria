@@ -38,6 +38,8 @@ struct ChunkBegin {
     value: i64,
 }
 
+struct ChunkString(String);
+
 impl ChunkBegin {
     fn size_of_length(version: Version) -> u8 {
         match version {
@@ -50,6 +52,8 @@ impl ChunkBegin {
         false
     }
 }
+
+struct Comment(String);
 
 trait Deserializer
 where
@@ -199,6 +203,29 @@ impl Deserialize for ChunkBegin {
     }
 }
 
+impl Deserialize for ChunkString {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    where
+        D: Deserializer,
+    {
+        let chunk_begin = ChunkBegin::deserialize(deserializer).unwrap();
+        let mut buffer = vec![0u8; chunk_begin.value as usize];
+        deserializer
+            .deserialize_bytes(buffer.as_mut_slice())
+            .unwrap();
+        Ok(ChunkString(String::from_utf8(buffer).unwrap()))
+    }
+}
+
+impl Deserialize for Comment {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    where
+        D: Deserializer,
+    {
+        Ok(Comment(ChunkString::deserialize(deserializer).unwrap().0))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -223,7 +250,11 @@ mod tests {
             }
             Err(_) => assert!(false),
         }
-        let result = 2 + 2;
-        assert_eq!(result, 4);
+        match Comment::deserialize(&mut deserializer) {
+            Ok(_) => {
+                assert!(true)
+            }
+            Err(_) => assert!(false),
+        }
     }
 }
