@@ -4,9 +4,8 @@ const FILE_BEGIN: &[u8] = "3D Geometry File Format ".as_bytes();
 
 struct Header;
 
-#[derive(Debug, Copy, Clone, PartialEq, Default)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 enum Version {
-    #[default]
     V1,
     V2,
     V3,
