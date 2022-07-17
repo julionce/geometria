@@ -1,4 +1,6 @@
-use std::{convert::TryFrom, io::Read, mem};
+mod typecode;
+
+use std::{convert::TryFrom, io::Read, io::Seek, io::SeekFrom, mem};
 
 const FILE_BEGIN: &[u8] = "3D Geometry File Format ".as_bytes();
 
@@ -239,7 +241,7 @@ mod tests {
         let file = File::open("src/serializer/rhino/test_file/v1/v1_three_points.3dm").unwrap();
         let mut deserializer = ReadDeserializer {
             reader: &mut BufReader::new(file),
-            version: Version::default(),
+            version: Version::V1,
             chunk_begin: ChunkBegin::default(),
         };
         match Header::deserialize(&mut deserializer) {
