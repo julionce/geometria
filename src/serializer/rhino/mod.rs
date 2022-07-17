@@ -48,7 +48,11 @@ impl ChunkBegin {
     }
 
     fn is_unsigned(self) -> bool {
-        false
+        0 == (typecode::SHORT & self.typecode)
+            || typecode::RGB == self.typecode
+            || typecode::RGBDISPLAY == self.typecode
+            || typecode::PROPERTIES_OPENNURBS_VERSION == self.typecode
+            || typecode::OBJECT_RECORD_TYPE == self.typecode
     }
 }
 
