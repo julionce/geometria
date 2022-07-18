@@ -67,6 +67,8 @@ struct Comment(String);
 
 struct StartSection;
 
+struct Properties;
+
 trait Deserializer
 where
     Self: Sized + Read + Seek,
@@ -386,6 +388,39 @@ impl Deserialize for StartSection {
     }
 }
 
+impl Deserialize for Properties {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    where
+        D: Deserializer,
+    {
+        if Version::V1 == deserializer.version() {
+            deserializer.seek(SeekFrom::Start(32u64)).unwrap();
+            loop {
+                let chunk_begin = ChunkBegin::deserialize(deserializer).unwrap();
+                match chunk_begin.typecode {
+                    typecode::COMMENTBLOCK => {
+                        let _comment = String::deserialize(deserializer, chunk_begin).unwrap();
+                    }
+                    typecode::SUMMARY => {
+                        break;
+                    }
+                    typecode::NOTES => {
+                        break;
+                    }
+                    typecode::BITMAPPREVIEW => {
+                        break;
+                    }
+                    typecode::CURRENTLAYER | typecode::LAYER => {
+                        break;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        Ok(Properties{})
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -417,6 +452,12 @@ mod tests {
             Err(_) => assert!(false),
         }
         match StartSection::deserialize(&mut deserializer) {
+            Ok(_) => {
+                assert!(true)
+            }
+            Err(_) => assert!(false),
+        }
+        match Properties::deserialize(&mut deserializer) {
             Ok(_) => {
                 assert!(true)
             }
