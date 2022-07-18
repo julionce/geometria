@@ -337,7 +337,8 @@ impl Deserialize for Comment {
     where
         D: Deserializer,
     {
-        Ok(Comment(ChunkString::deserialize(deserializer).unwrap().0))
+        let comment = Chunk::<String>::deserialize(deserializer).unwrap().data;
+        Ok(Comment(comment))
     }
 }
 
@@ -350,7 +351,7 @@ mod tests {
     fn serialize_3dm() {
         let file = File::open("src/serializer/rhino/test_file/v1/v1_three_points.3dm").unwrap();
         let mut deserializer = ReadDeserializer {
-            reader: &mut BufReader::new(file),
+            stream: &mut BufReader::new(file),
             version: Version::V1,
             chunk_begin: ChunkBegin::default(),
         };
