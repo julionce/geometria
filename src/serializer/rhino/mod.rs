@@ -39,6 +39,11 @@ struct ChunkBegin {
     value: i64,
 }
 
+struct Chunk<T> {
+    begin: ChunkBegin,
+    data: T,
+}
+
 struct ChunkString(String);
 
 impl ChunkBegin {
@@ -160,6 +165,15 @@ where
     Self: Sized,
 {
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    where
+        D: Deserializer;
+}
+
+trait DeserializeChunk
+where
+    Self: Sized,
+{
+    fn deserialize<D>(deserializer: &mut D, chunk_begin: ChunkBegin) -> Result<Self, String>
     where
         D: Deserializer;
 }
