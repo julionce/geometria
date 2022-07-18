@@ -62,7 +62,7 @@ struct Comment(String);
 
 trait Deserializer
 where
-    Self: Sized,
+    Self: Sized + Read + Seek,
 {
     fn deserialize_bytes(&mut self, buf: &mut [u8]) -> Result<(), String>;
     fn deserialize_i32(&mut self) -> Result<i32, String>;
@@ -76,15 +76,39 @@ where
     fn set_chunk_begin(&mut self, chunk_begin: ChunkBegin);
 }
 
-struct ReadDeserializer<'a> {
-    reader: &'a mut (dyn Read + 'a),
+struct ReadDeserializer<'a, T>
+where
+    T: Read + Seek,
+{
+    stream: &'a mut T,
     version: Version,
     chunk_begin: ChunkBegin,
 }
 
-impl Deserializer for ReadDeserializer<'_> {
+impl<T> Read for ReadDeserializer<'_, T>
+where
+    T: Read + Seek,
+{
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.stream.read(buf)
+    }
+}
+
+impl<T> Seek for ReadDeserializer<'_, T>
+where
+    T: Read + Seek,
+{
+    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
+        self.stream.seek(pos)
+    }
+}
+
+impl<T> Deserializer for ReadDeserializer<'_, T>
+where
+    T: Read + Seek,
+{
     fn deserialize_bytes(&mut self, buf: &mut [u8]) -> Result<(), String> {
-        match self.reader.read_exact(buf) {
+        match self.read_exact(buf) {
             Ok(()) => Ok(()),
             Err(e) => Err(format!("{}", e)),
         }
@@ -92,7 +116,7 @@ impl Deserializer for ReadDeserializer<'_> {
 
     fn deserialize_i32(&mut self) -> Result<i32, String> {
         let mut buffer = [0; mem::size_of::<i32>()];
-        match self.reader.read_exact(&mut buffer) {
+        match self.read_exact(&mut buffer) {
             Ok(()) => Ok(i32::from_le_bytes(buffer)),
             Err(e) => Err(format!("{}", e)),
         }
@@ -100,7 +124,7 @@ impl Deserializer for ReadDeserializer<'_> {
 
     fn deserialize_u32(&mut self) -> Result<u32, String> {
         let mut buffer = [0; mem::size_of::<u32>()];
-        match self.reader.read_exact(&mut buffer) {
+        match self.read_exact(&mut buffer) {
             Ok(()) => Ok(u32::from_le_bytes(buffer)),
             Err(e) => Err(format!("{}", e)),
         }
@@ -108,7 +132,7 @@ impl Deserializer for ReadDeserializer<'_> {
 
     fn deserialize_i64(&mut self) -> Result<i64, String> {
         let mut buffer = [0; mem::size_of::<i64>()];
-        match self.reader.read_exact(&mut buffer) {
+        match self.read_exact(&mut buffer) {
             Ok(()) => Ok(i64::from_le_bytes(buffer)),
             Err(e) => Err(format!("{}", e)),
         }
