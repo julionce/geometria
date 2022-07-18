@@ -238,11 +238,12 @@ impl Deserialize for ChunkString {
         D: Deserializer,
     {
         let chunk_begin = ChunkBegin::deserialize(deserializer).unwrap();
-        let mut buffer = vec![0u8; chunk_begin.value as usize];
+        let mut buf = String::default();
         deserializer
-            .deserialize_bytes(buffer.as_mut_slice())
+            .take(chunk_begin.value as u64)
+            .read_to_string(&mut buf)
             .unwrap();
-        Ok(ChunkString(String::from_utf8(buffer).unwrap()))
+        Ok(ChunkString(buf))
     }
 }
 
