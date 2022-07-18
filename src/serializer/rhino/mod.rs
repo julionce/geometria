@@ -263,6 +263,45 @@ where
     }
 }
 
+struct EmptyChunk;
+struct BackwardEmptyChunk;
+struct ForwardChunk;
+
+impl DeserializeChunk for EmptyChunk {
+    fn deserialize<D>(_deserializer: &mut D, _chunk_begin: ChunkBegin) -> Result<Self, String>
+    where
+        D: Deserializer,
+    {
+        Ok(EmptyChunk {})
+    }
+}
+
+impl DeserializeChunk for BackwardEmptyChunk {
+    fn deserialize<D>(deserializer: &mut D, chunk_begin: ChunkBegin) -> Result<Self, String>
+    where
+        D: Deserializer,
+    {
+        deserializer
+            .seek(SeekFrom::Current(
+                -(mem::size_of_val(&chunk_begin.typecode) as i64
+                    + ChunkBegin::size_of_length(deserializer.version()) as i64),
+            ))
+            .unwrap();
+        Ok(BackwardEmptyChunk {})
+    }
+}
+
+impl DeserializeChunk for ForwardChunk {
+    fn deserialize<D>(deserializer: &mut D, chunk_begin: ChunkBegin) -> Result<Self, String>
+    where
+        D: Deserializer,
+    {
+        deserializer
+            .seek(SeekFrom::Current(chunk_begin.value))
+            .unwrap();
+        Ok(ForwardChunk {})
+    }
+}
 
 impl Deserialize for ChunkString {
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
