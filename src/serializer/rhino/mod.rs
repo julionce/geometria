@@ -246,6 +246,24 @@ impl Deserialize for ChunkBegin {
     }
 }
 
+impl<T> Deserialize for Chunk<T>
+where
+    T: DeserializeChunk,
+{
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    where
+        D: Deserializer,
+    {
+        let begin = ChunkBegin::deserialize(deserializer).unwrap();
+        let data = T::deserialize(deserializer, begin).unwrap();
+        Ok(Chunk::<T> {
+            begin: begin,
+            data: data,
+        })
+    }
+}
+
+
 impl Deserialize for ChunkString {
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
     where
