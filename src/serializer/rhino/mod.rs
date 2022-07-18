@@ -303,6 +303,20 @@ impl DeserializeChunk for ForwardChunk {
     }
 }
 
+impl DeserializeChunk for String {
+    fn deserialize<D>(deserializer: &mut D, chunk_begin: ChunkBegin) -> Result<Self, String>
+    where
+        D: Deserializer,
+    {
+        let mut buf = String::default();
+        deserializer
+            .take(chunk_begin.value as u64)
+            .read_to_string(&mut buf)
+            .unwrap();
+        Ok(buf)
+    }
+}
+
 impl Deserialize for ChunkString {
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
     where
