@@ -65,6 +65,8 @@ impl ChunkBegin {
 
 struct Comment(String);
 
+struct StartSection;
+
 trait Deserializer
 where
     Self: Sized + Read + Seek,
@@ -342,6 +344,48 @@ impl Deserialize for Comment {
     }
 }
 
+impl Deserialize for StartSection {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    where
+        D: Deserializer,
+    {
+        let initial_position = SeekFrom::Start(deserializer.stream_position().unwrap());
+        if Version::V1 == deserializer.version() {
+            loop {
+                let empty_chunk = Chunk::<BackwardEmptyChunk>::deserialize(deserializer).unwrap();
+                match empty_chunk.begin.typecode {
+                    typecode::SUMMARY
+                    | typecode::BITMAPPREVIEW
+                    | typecode::UNIT_AND_TOLERANCES
+                    | typecode::VIEWPORT
+                    | typecode::LAYER
+                    | typecode::RENDERMESHPARAMS
+                    | typecode::CURRENTLAYER
+                    | typecode::ANNOTATION_SETTINGS
+                    | typecode::NOTES
+                    | typecode::NAMED_CPLANE
+                    | typecode::NAMED_VIEW => {
+                        let _forward_chunk =
+                            Chunk::<ForwardChunk>::deserialize(deserializer).unwrap();
+                        let _testing = false;
+                    }
+                    _ => {
+                        if typecode::TABLE == empty_chunk.begin.typecode & 0xFFFF0000 {
+                            deserializer.set_version(Version::V2);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        if Version::V1 == deserializer.version() {
+            deserializer.seek(initial_position).unwrap();
+        }
+        Ok(StartSection {})
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -367,6 +411,12 @@ mod tests {
             Err(_) => assert!(false),
         }
         match Comment::deserialize(&mut deserializer) {
+            Ok(_) => {
+                assert!(true)
+            }
+            Err(_) => assert!(false),
+        }
+        match StartSection::deserialize(&mut deserializer) {
             Ok(_) => {
                 assert!(true)
             }
