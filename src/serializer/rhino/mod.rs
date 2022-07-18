@@ -216,16 +216,16 @@ impl Deserialize for ChunkBegin {
     where
         D: Deserializer,
     {
-        let mut chunk_begin = ChunkBegin::default();
-        chunk_begin.typecode = deserializer.deserialize_u32().unwrap();
+        let mut chunk_begin = ChunkBegin {
+            typecode: deserializer.deserialize_u32().unwrap(),
+            value: 0i64,
+        };
         if 8 == ChunkBegin::size_of_length(deserializer.version()) {
             chunk_begin.value = deserializer.deserialize_i64().unwrap();
+        } else if chunk_begin.is_unsigned() {
+            chunk_begin.value = deserializer.deserialize_u32().unwrap() as i64;
         } else {
-            if chunk_begin.is_unsigned() {
-                chunk_begin.value = deserializer.deserialize_u32().unwrap() as i64;
-            } else {
-                chunk_begin.value = deserializer.deserialize_i32().unwrap() as i64;
-            }
+            chunk_begin.value = deserializer.deserialize_i32().unwrap() as i64;
         }
         deserializer.set_chunk_begin(chunk_begin);
         Ok(chunk_begin)
