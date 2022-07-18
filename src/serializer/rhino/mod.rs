@@ -67,6 +67,11 @@ struct Comment(String);
 
 struct StartSection;
 
+struct StringWithLength {
+    length: u32,
+    string: String,
+}
+
 struct Properties;
 
 trait Deserializer
@@ -385,6 +390,21 @@ impl Deserialize for StartSection {
             deserializer.seek(initial_position).unwrap();
         }
         Ok(StartSection {})
+    }
+}
+
+impl Deserialize for StringWithLength {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    where
+        D: Deserializer,
+    {
+        let length = deserializer.deserialize_u32().unwrap();
+        let mut string = String::default();
+        deserializer
+            .take(length as u64)
+            .read_to_string(&mut string)
+            .unwrap();
+        Ok(StringWithLength { length, string })
     }
 }
 
