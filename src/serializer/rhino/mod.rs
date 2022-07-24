@@ -72,6 +72,18 @@ struct StringWithLength {
     string: String,
 }
 
+#[derive(Default)]
+struct Time {
+    second: u32,
+    minute: u32,
+    hour: u32,
+    month_day: u32,
+    month: u32,
+    year: u32,
+    week_day: u32,
+    year_day: u32,
+}
+
 struct Properties;
 
 trait Deserializer
@@ -405,6 +417,24 @@ impl Deserialize for StringWithLength {
             .read_to_string(&mut string)
             .unwrap();
         Ok(StringWithLength { length, string })
+    }
+}
+
+impl Deserialize for Time {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    where
+        D: Deserializer,
+    {
+        let mut time = Time::default();
+        time.second = deserializer.deserialize_u32()?;
+        time.minute = deserializer.deserialize_u32()?;
+        time.hour = deserializer.deserialize_u32()?;
+        time.month_day = deserializer.deserialize_u32()?;
+        time.month = deserializer.deserialize_u32()?;
+        time.year = deserializer.deserialize_u32()?;
+        time.week_day = deserializer.deserialize_u32()?;
+        time.year_day = deserializer.deserialize_u32()?;
+        Ok(time)
     }
 }
 
