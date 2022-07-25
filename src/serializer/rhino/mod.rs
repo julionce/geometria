@@ -91,6 +91,7 @@ where
     Self: Sized + Read + Seek,
 {
     fn deserialize_bytes(&mut self, buf: &mut [u8]) -> Result<(), String>;
+    fn deserialize_u8(&mut self) -> Result<u8, String>;
     fn deserialize_i32(&mut self) -> Result<i32, String>;
     fn deserialize_u32(&mut self) -> Result<u32, String>;
     fn deserialize_i64(&mut self) -> Result<i64, String>;
@@ -136,6 +137,14 @@ where
     fn deserialize_bytes(&mut self, buf: &mut [u8]) -> Result<(), String> {
         match self.read_exact(buf) {
             Ok(()) => Ok(()),
+            Err(e) => Err(format!("{}", e)),
+        }
+    }
+
+    fn deserialize_u8(&mut self) -> Result<u8, String> {
+        let mut buffer = [0; mem::size_of::<u8>()];
+        match self.read_exact(&mut buffer) {
+            Ok(()) => Ok(u8::from_le_bytes(buffer)),
             Err(e) => Err(format!("{}", e)),
         }
     }
