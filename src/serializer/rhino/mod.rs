@@ -89,6 +89,15 @@ struct Time {
     year_day: u32,
 }
 
+#[derive(Default)]
+struct RevisionHistory {
+    created_by: String,
+    last_edited_by: String,
+    create_time: Time,
+    last_edit_time: Time,
+    revision_count: i32,
+}
+
 struct Properties;
 
 trait Deserializer
@@ -465,6 +474,36 @@ impl Deserialize for Time {
     }
 }
 
+impl Deserialize for RevisionHistory {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    where
+        D: Deserializer,
+    {
+        let mut revision_history = RevisionHistory::default();
+        if Version::V1 == deserializer.version() {
+            revision_history.created_by = StringWithLength::deserialize(deserializer)?.string;
+            revision_history.create_time = Time::deserialize(deserializer)?;
+            deserializer.deserialize_i32()?;
+            revision_history.last_edited_by = StringWithLength::deserialize(deserializer)?.string;
+            revision_history.last_edit_time = Time::deserialize(deserializer)?;
+            deserializer.deserialize_i32()?;
+            revision_history.revision_count = deserializer.deserialize_i32()?;
+        } else {
+            let chunk_version = ChunkVersion::deserialize(deserializer)?;
+            if 1u8 == chunk_version.major {
+                // TODO
+                // revision_history.created_by = WStringWithLength::deserialize(deserializer)?;
+                revision_history.create_time = Time::deserialize(deserializer)?;
+                // TODO
+                // revision_history.last_edited_by = WStringWithLength::deserialize(deserializer)?;
+                revision_history.last_edit_time = Time::deserialize(deserializer)?;
+                revision_history.revision_count = deserializer.deserialize_i32()?;
+            }
+        }
+        Ok(revision_history)
+    }
+}
+
 impl Deserialize for Properties {
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
     where
@@ -494,7 +533,7 @@ impl Deserialize for Properties {
                 }
             }
         }
-        Ok(Properties{})
+        Ok(Properties {})
     }
 }
 
