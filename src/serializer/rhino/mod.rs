@@ -39,6 +39,11 @@ struct ChunkBegin {
     value: i64,
 }
 
+struct ChunkVersion {
+    minor: u8,
+    major: u8,
+}
+
 struct Chunk<T> {
     begin: ChunkBegin,
     data: T,
@@ -273,6 +278,19 @@ impl Deserialize for ChunkBegin {
         }
         deserializer.set_chunk_begin(chunk_begin);
         Ok(chunk_begin)
+    }
+}
+
+impl Deserialize for ChunkVersion {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    where
+        D: Deserializer,
+    {
+        let raw_version = deserializer.deserialize_u8()?;
+        Ok(ChunkVersion {
+            minor: raw_version | 0x0F,
+            major: raw_version >> 4,
+        })
     }
 }
 
