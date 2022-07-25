@@ -98,6 +98,17 @@ struct RevisionHistory {
     revision_count: i32,
 }
 
+#[derive(Default)]
+struct Notes {
+    data: String,
+    visible: bool,
+    html_encoded: bool,
+    window_left: i32,
+    window_top: i32,
+    window_right: i32,
+    window_bottom: i32,
+}
+
 struct Properties;
 
 trait Deserializer
@@ -501,6 +512,36 @@ impl Deserialize for RevisionHistory {
             }
         }
         Ok(revision_history)
+    }
+}
+
+impl Deserialize for Notes {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    where
+        D: Deserializer,
+    {
+        let mut notes = Notes::default();
+        if Version::V1 == deserializer.version() {
+            notes.visible = deserializer.deserialize_i32()? != 0i32;
+            notes.window_left = deserializer.deserialize_i32()?;
+            notes.window_top = deserializer.deserialize_i32()?;
+            notes.window_right = deserializer.deserialize_i32()?;
+            notes.window_bottom = deserializer.deserialize_i32()?;
+            notes.data = StringWithLength::deserialize(deserializer)?.string;
+        } else {
+            let chunk_version = ChunkVersion::deserialize(deserializer)?;
+            if 1u8 == chunk_version.major {
+                notes.html_encoded = deserializer.deserialize_i32()? != 0i32;
+                // TODO
+                // notes.data = WStringWithLength::deserialize(deserializer)?.string;
+                notes.visible = deserializer.deserialize_i32()? != 0i32;
+                notes.window_left = deserializer.deserialize_i32()?;
+                notes.window_top = deserializer.deserialize_i32()?;
+                notes.window_right = deserializer.deserialize_i32()?;
+                notes.window_bottom = deserializer.deserialize_i32()?;
+            }
+        }
+        Ok(notes)
     }
 }
 
