@@ -37,6 +37,7 @@ impl TryFrom<u8> for Version {
 struct ChunkBegin {
     typecode: u32,
     value: i64,
+    initial_position: u64,
 }
 
 struct ChunkVersion {
@@ -288,6 +289,7 @@ impl Deserialize for ChunkBegin {
         let mut chunk_begin = ChunkBegin {
             typecode: deserializer.deserialize_u32().unwrap(),
             value: 0i64,
+            initial_position: 0u64,
         };
         if 8 == ChunkBegin::size_of_length(deserializer.version()) {
             chunk_begin.value = deserializer.deserialize_i64().unwrap();
@@ -295,6 +297,10 @@ impl Deserialize for ChunkBegin {
             chunk_begin.value = deserializer.deserialize_u32().unwrap() as i64;
         } else {
             chunk_begin.value = deserializer.deserialize_i32().unwrap() as i64;
+        }
+        match deserializer.stream_position() {
+            Ok(position) => chunk_begin.initial_position = position,
+            Err(e) => return Err(format!("{}", e)),
         }
         deserializer.set_chunk_begin(chunk_begin);
         Ok(chunk_begin)
