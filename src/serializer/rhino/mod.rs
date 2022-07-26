@@ -110,7 +110,11 @@ struct Notes {
     window_bottom: i32,
 }
 
-struct Properties;
+#[derive(Default)]
+struct Properties {
+    revision_history: RevisionHistory,
+    notes: Notes,
+}
 
 trait Deserializer
 where
@@ -556,6 +560,7 @@ impl Deserialize for Properties {
     where
         D: Deserializer,
     {
+        let mut properties = Properties::default();
         if Version::V1 == deserializer.version() {
             deserializer.seek(SeekFrom::Start(32u64)).unwrap();
             loop {
@@ -565,10 +570,10 @@ impl Deserialize for Properties {
                         let _comment = String::deserialize(deserializer, chunk_begin).unwrap();
                     }
                     typecode::SUMMARY => {
-                        break;
+                        properties.revision_history = RevisionHistory::deserialize(deserializer)?;
                     }
                     typecode::NOTES => {
-                        break;
+                        properties.notes = Notes::deserialize(deserializer)?;
                     }
                     typecode::BITMAPPREVIEW => {
                         break;
@@ -578,9 +583,16 @@ impl Deserialize for Properties {
                     }
                     _ => {}
                 }
+                // TODO: create a ScopedChunkBegin
+                match deserializer.seek(SeekFrom::Start(
+                    chunk_begin.initial_position + chunk_begin.value as u64,
+                )) {
+                    Ok(_) => {}
+                    Err(e) => return Err(format!("{}", e)),
+                }
             }
         }
-        Ok(Properties {})
+        Ok(properties)
     }
 }
 
