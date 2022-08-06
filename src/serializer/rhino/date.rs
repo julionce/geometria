@@ -1,3 +1,4 @@
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GregorianDate {
     year: u16,
     month: u8,
@@ -234,5 +235,20 @@ mod tests {
         assert!(!GregorianDate::new(1620, 1, 1).unwrap().is_leap_year());
         assert!(!GregorianDate::new(1625, 1, 1).unwrap().is_leap_year());
         assert!(!GregorianDate::new(1700, 1, 1).unwrap().is_leap_year());
+    }
+
+    #[test]
+    fn cmp_impl() {
+        assert_eq!(
+            GregorianDate::new(1624, 1, 1).unwrap(),
+            GregorianDate::new(1624, 1, 1).unwrap()
+        );
+        assert_ne!(
+            GregorianDate::new(1624, 1, 1).unwrap(),
+            GregorianDate::new(1624, 1, 2).unwrap()
+        );
+        assert!(GregorianDate::new(1625, 1, 1).unwrap() > GregorianDate::new(1624, 2, 2).unwrap());
+        assert!(GregorianDate::new(1624, 2, 1).unwrap() > GregorianDate::new(1624, 1, 2).unwrap());
+        assert!(GregorianDate::new(1624, 1, 2).unwrap() > GregorianDate::new(1624, 1, 1).unwrap());
     }
 }
