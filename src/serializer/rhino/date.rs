@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GregorianDate {
     year: u16,
@@ -5,23 +7,40 @@ pub struct GregorianDate {
     day: u8,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum Error {
+    InvalidYear,
+    InvalidMonth,
+    InvalidDay,
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidYear => write!(f, "invalid year, it must be greater than 1582"),
+            Self::InvalidMonth => write!(f, "invalid month, it must be in the 1..=12 range"),
+            Self::InvalidDay => write!(f, "invalid day for the particular year and month"),
+        }
+    }
+}
+
 impl GregorianDate {
     const FIRST_YEAR: u16 = 1582;
 
-    pub fn new(year: u16, month: u8, day: u8) -> Result<Self, &'static str> {
+    pub fn new(year: u16, month: u8, day: u8) -> Result<Self, Error> {
         let date = GregorianDate { year, month, day };
         if Self::FIRST_YEAR <= year {
             if (1..=12).contains(&month) {
                 if (1..=date.days_of_month()).contains(&day) {
                     Ok(date)
                 } else {
-                    Err("Invalid day")
+                    Err(Error::InvalidDay)
                 }
             } else {
-                Err("Invalid month")
+                Err(Error::InvalidMonth)
             }
         } else {
-            Err("Invalid year")
+            Err(Error::InvalidYear)
         }
     }
 
@@ -96,7 +115,10 @@ mod tests {
 
     #[test]
     fn invalid_year() {
-        assert!(GregorianDate::new(1581, 1, 1).is_err());
+        assert_eq!(
+            GregorianDate::new(1581, 1, 1).err(),
+            Some(Error::InvalidYear)
+        );
     }
 
     #[test]
@@ -116,8 +138,14 @@ mod tests {
 
     #[test]
     fn invalid_month() {
-        assert!(GregorianDate::new(1582, 0, 1).is_err());
-        assert!(GregorianDate::new(1582, 13, 1).is_err());
+        assert_eq!(
+            GregorianDate::new(1582, 0, 1).err(),
+            Some(Error::InvalidMonth)
+        );
+        assert_eq!(
+            GregorianDate::new(1582, 13, 1).err(),
+            Some(Error::InvalidMonth)
+        );
     }
 
     #[test]
@@ -174,14 +202,24 @@ mod tests {
     #[test]
     fn invalid_day() {
         for month in 1..=12 {
-            assert!(GregorianDate::new(1582, month, 0).is_err());
+            assert_eq!(
+                GregorianDate::new(1582, month, 0).err(),
+                Some(Error::InvalidDay)
+            );
         }
         for month in [1, 3, 5, 7, 8, 10, 12] {
+            assert_eq!(
+                GregorianDate::new(1582, month, 32).err(),
+                Some(Error::InvalidDay)
+            );
             assert!(GregorianDate::new(1582, month, 32).is_err());
         }
 
         for month in [4, 6, 9, 11] {
-            assert!(GregorianDate::new(1582, month, 31).is_err());
+            assert_eq!(
+                GregorianDate::new(1582, month, 31).err(),
+                Some(Error::InvalidDay)
+            );
         }
 
         assert!(GregorianDate::new(1582, 2, 29).is_err());
