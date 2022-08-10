@@ -27,42 +27,39 @@ impl Display for Error {
 impl GregorianDate {
     const FIRST_YEAR: u16 = 1582;
 
-    pub fn new(year: u16, month: u8, day: u8) -> Result<Self, Error> {
+    pub const fn new(year: u16, month: u8, day: u8) -> Result<Self, Error> {
         let date = GregorianDate { year, month, day };
-        if Self::FIRST_YEAR <= year {
-            if (1..=12).contains(&month) {
-                if (1..=date.days_of_month()).contains(&day) {
-                    Ok(date)
-                } else {
-                    Err(Error::InvalidDay)
-                }
-            } else {
-                Err(Error::InvalidMonth)
-            }
-        } else {
-            Err(Error::InvalidYear)
+        if Self::FIRST_YEAR > year {
+            return Err(Error::InvalidYear);
         }
+        if 1 > month || 12 < month {
+            return Err(Error::InvalidMonth);
+        }
+        if 1 > day || date.days_of_month() < day {
+            return Err(Error::InvalidDay);
+        }
+        Ok(date)
     }
 
-    pub fn year(&self) -> u16 {
+    pub const fn year(&self) -> u16 {
         self.year
     }
 
-    pub fn month(&self) -> u8 {
+    pub const fn month(&self) -> u8 {
         self.month
     }
 
-    pub fn day(&self) -> u8 {
+    pub const fn day(&self) -> u8 {
         self.day
     }
 
-    pub fn is_leap_year(&self) -> bool {
+    pub const fn is_leap_year(&self) -> bool {
         (1624 <= self.year)
             && (0 == (self.year % 4))
             && (0 == (self.year % 400) || 0 != (self.year % 100))
     }
 
-    pub fn days_of_month(&self) -> u8 {
+    pub const fn days_of_month(&self) -> u8 {
         match self.month {
             1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
             4 | 6 | 9 | 11 => 30,
@@ -77,7 +74,7 @@ impl GregorianDate {
         }
     }
 
-    pub fn day_of_the_year(&self) -> u16 {
+    pub const fn day_of_the_year(&self) -> u16 {
         let extra_day = if self.is_leap_year() { 1u16 } else { 0u16 };
         match self.month {
             1 => self.day as u16,
