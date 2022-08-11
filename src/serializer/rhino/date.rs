@@ -1,17 +1,22 @@
 use std::fmt::Display;
 
+pub type Year = u16;
+pub type Month = u8;
+pub type DayOfMonth = u8;
+pub type DayOfYear = u16;
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GregorianDate {
-    year: u16,
-    month: u8,
-    day: u8,
+    year: Year,
+    month: Month,
+    day_of_month: DayOfMonth,
 }
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
     InvalidYear,
     InvalidMonth,
-    InvalidDay,
+    InvalidDayOfMonth,
 }
 
 impl Display for Error {
@@ -19,38 +24,42 @@ impl Display for Error {
         match self {
             Self::InvalidYear => write!(f, "invalid year, it must be greater than 1582"),
             Self::InvalidMonth => write!(f, "invalid month, it must be in the 1..=12 range"),
-            Self::InvalidDay => write!(f, "invalid day for the particular year and month"),
+            Self::InvalidDayOfMonth => write!(f, "invalid day for the particular year and month"),
         }
     }
 }
 
 impl GregorianDate {
-    const FIRST_YEAR: u16 = 1582;
+    const FIRST_YEAR: Year = 1582;
 
-    pub const fn new(year: u16, month: u8, day: u8) -> Result<Self, Error> {
-        let date = GregorianDate { year, month, day };
+    pub const fn new(year: Year, month: Month, day_of_month: DayOfMonth) -> Result<Self, Error> {
+        let date = GregorianDate {
+            year,
+            month,
+            day_of_month,
+        };
         if Self::FIRST_YEAR > year {
             return Err(Error::InvalidYear);
         }
         if 1 > month || 12 < month {
             return Err(Error::InvalidMonth);
         }
-        if 1 > day || date.days_of_month() < day {
-            return Err(Error::InvalidDay);
+        if 1 > day_of_month || date.days_of_month() < day_of_month {
+            return Err(Error::InvalidDayOfMonth);
         }
         Ok(date)
     }
 
-    pub const fn year(&self) -> u16 {
+    pub const fn year(&self) -> Year {
         self.year
     }
 
-    pub const fn month(&self) -> u8 {
+    pub const fn month(&self) -> Month {
         self.month
     }
 
-    pub const fn day(&self) -> u8 {
-        self.day
+    pub const fn day_of_month(&self) -> DayOfMonth {
+        self.day_of_month
     }
 
     pub const fn is_leap_year(&self) -> bool {
@@ -59,7 +68,7 @@ impl GregorianDate {
             && (0 == (self.year % 400) || 0 != (self.year % 100))
     }
 
-    pub const fn days_of_month(&self) -> u8 {
+    pub const fn days_of_month(&self) -> DayOfMonth {
         match self.month {
             1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
             4 | 6 | 9 | 11 => 30,
@@ -74,21 +83,21 @@ impl GregorianDate {
         }
     }
 
-    pub const fn day_of_the_year(&self) -> u16 {
+    pub const fn day_of_the_year(&self) -> DayOfYear {
         let extra_day = if self.is_leap_year() { 1u16 } else { 0u16 };
         match self.month {
-            1 => self.day as u16,
-            2 => 31 + self.day as u16,
-            3 => 59 + self.day as u16 + extra_day,
-            4 => 90 + self.day as u16 + extra_day,
-            5 => 120 + self.day as u16 + extra_day,
-            6 => 151 + self.day as u16 + extra_day,
-            7 => 181 + self.day as u16 + extra_day,
-            8 => 212 + self.day as u16 + extra_day,
-            9 => 243 + self.day as u16 + extra_day,
-            10 => 273 + self.day as u16 + extra_day,
-            11 => 304 + self.day as u16 + extra_day,
-            12 => 334 + self.day as u16 + extra_day,
+            1 => self.day_of_month as DayOfYear,
+            2 => 31 + self.day_of_month as DayOfYear,
+            3 => 59 + self.day_of_month as DayOfYear + extra_day,
+            4 => 90 + self.day_of_month as DayOfYear + extra_day,
+            5 => 120 + self.day_of_month as DayOfYear + extra_day,
+            6 => 151 + self.day_of_month as DayOfYear + extra_day,
+            7 => 181 + self.day_of_month as DayOfYear + extra_day,
+            8 => 212 + self.day_of_month as DayOfYear + extra_day,
+            9 => 243 + self.day_of_month as DayOfYear + extra_day,
+            10 => 273 + self.day_of_month as DayOfYear + extra_day,
+            11 => 304 + self.day_of_month as DayOfYear + extra_day,
+            12 => 334 + self.day_of_month as DayOfYear + extra_day,
             _ => 0,
         }
     }
@@ -151,7 +160,7 @@ mod tests {
             for day in 1..=31 {
                 match GregorianDate::new(1582, month, day) {
                     Ok(date) => {
-                        assert_eq!(day, date.day);
+                        assert_eq!(day, date.day_of_month);
                     }
                     Err(_) => {
                         assert!(false);
@@ -164,7 +173,7 @@ mod tests {
             for day in 1..=30 {
                 match GregorianDate::new(1582, month, day) {
                     Ok(date) => {
-                        assert_eq!(day, date.day);
+                        assert_eq!(day, date.day_of_month);
                     }
                     Err(_) => {
                         assert!(false);
@@ -176,7 +185,7 @@ mod tests {
         for day in 1..=28 {
             match GregorianDate::new(1582, 2, day) {
                 Ok(date) => {
-                    assert_eq!(day, date.day);
+                    assert_eq!(day, date.day_of_month);
                 }
                 Err(_) => {
                     assert!(false);
@@ -187,7 +196,7 @@ mod tests {
         for day in 1..=29 {
             match GregorianDate::new(1624, 2, day) {
                 Ok(date) => {
-                    assert_eq!(day, date.day);
+                    assert_eq!(day, date.day_of_month);
                 }
                 Err(_) => {
                     assert!(false);
@@ -201,13 +210,13 @@ mod tests {
         for month in 1..=12 {
             assert_eq!(
                 GregorianDate::new(1582, month, 0).err(),
-                Some(Error::InvalidDay)
+                Some(Error::InvalidDayOfMonth)
             );
         }
         for month in [1, 3, 5, 7, 8, 10, 12] {
             assert_eq!(
                 GregorianDate::new(1582, month, 32).err(),
-                Some(Error::InvalidDay)
+                Some(Error::InvalidDayOfMonth)
             );
             assert!(GregorianDate::new(1582, month, 32).is_err());
         }
@@ -215,7 +224,7 @@ mod tests {
         for month in [4, 6, 9, 11] {
             assert_eq!(
                 GregorianDate::new(1582, month, 31).err(),
-                Some(Error::InvalidDay)
+                Some(Error::InvalidDayOfMonth)
             );
         }
 
