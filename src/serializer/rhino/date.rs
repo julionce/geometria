@@ -5,7 +5,7 @@ pub type Month = u8;
 pub type DayOfMonth = u8;
 pub type DayOfYear = u16;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct GregorianDate {
     year: Year,
     month: Month,
@@ -90,6 +90,18 @@ impl GregorianDate {
         } else {
             365
         }
+    }
+
+    pub const fn first_of_month(&self) -> GregorianDate {
+        let mut date = *self;
+        date.day_of_month = 1;
+        date
+    }
+
+    pub const fn last_of_month(&self) -> GregorianDate {
+        let mut date = *self;
+        date.day_of_month = self.month_days();
+        date
     }
 }
 
