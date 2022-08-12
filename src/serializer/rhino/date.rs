@@ -83,6 +83,14 @@ impl GregorianDate {
             _ => 0,
         }
     }
+
+    pub const fn year_days(&self) -> DayOfYear {
+        if self.is_leap_year() {
+            366
+        } else {
+            365
+        }
+    }
 }
 
 pub struct GregorianDateBuilder {
@@ -331,6 +339,26 @@ mod tests {
                 .unwrap()
                 .month_days(),
             29
+        );
+    }
+
+    #[test]
+    fn year_days() {
+        assert_eq!(
+            GregorianDateBuilder::new()
+                .year(1999)
+                .build()
+                .unwrap()
+                .year_days(),
+            365
+        );
+        assert_eq!(
+            GregorianDateBuilder::new()
+                .year(2000)
+                .build()
+                .unwrap()
+                .year_days(),
+            366
         );
     }
 
