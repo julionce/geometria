@@ -113,13 +113,9 @@ impl GregorianDateBuilder {
         self
     }
 
-    pub const fn month(mut self, month: Month) -> Self {
+    pub const fn month_and_day(mut self, month: Month, day: DayOfMonth) -> Self {
         self.month = month;
-        self
-    }
-
-    pub const fn day_of_month(mut self, day_of_month: DayOfMonth) -> Self {
-        self.day_of_month = day_of_month;
+        self.day_of_month = day;
         self
     }
 
@@ -163,8 +159,7 @@ mod tests {
         assert_eq!(
             GregorianDateBuilder::new()
                 .year(1989)
-                .month(11)
-                .day_of_month(11)
+                .month_and_day(11, 11)
                 .build()
                 .ok(),
             Some(GregorianDate {
@@ -191,18 +186,27 @@ mod tests {
     #[test]
     fn valid_month() {
         for month in 1..=12 {
-            assert!(GregorianDateBuilder::new().month(month).build().is_ok());
+            assert!(GregorianDateBuilder::new()
+                .month_and_day(month, 1)
+                .build()
+                .is_ok());
         }
     }
 
     #[test]
     fn invalid_month() {
         assert_eq!(
-            GregorianDateBuilder::new().month(0).build().err(),
+            GregorianDateBuilder::new()
+                .month_and_day(0, 1)
+                .build()
+                .err(),
             Some(Error::InvalidMonth)
         );
         assert_eq!(
-            GregorianDateBuilder::new().month(13).build().err(),
+            GregorianDateBuilder::new()
+                .month_and_day(13, 1)
+                .build()
+                .err(),
             Some(Error::InvalidMonth)
         );
     }
@@ -212,8 +216,7 @@ mod tests {
         for month in [1, 3, 5, 7, 8, 10, 12] {
             for day in 1..=31 {
                 assert!(GregorianDateBuilder::new()
-                    .month(month)
-                    .day_of_month(day)
+                    .month_and_day(month, day)
                     .build()
                     .is_ok());
             }
@@ -222,8 +225,7 @@ mod tests {
         for month in [4, 6, 9, 1] {
             for day in 1..=30 {
                 assert!(GregorianDateBuilder::new()
-                    .month(month)
-                    .day_of_month(day)
+                    .month_and_day(month, day)
                     .build()
                     .is_ok());
             }
@@ -231,8 +233,7 @@ mod tests {
 
         for day in 1..=28 {
             assert!(GregorianDateBuilder::new()
-                .month(2)
-                .day_of_month(day)
+                .month_and_day(2, day)
                 .build()
                 .is_ok());
         }
@@ -240,8 +241,7 @@ mod tests {
         for day in 1..=29 {
             assert!(GregorianDateBuilder::new()
                 .year(1624)
-                .month(2)
-                .day_of_month(day)
+                .month_and_day(2, day)
                 .build()
                 .is_ok());
         }
@@ -252,8 +252,7 @@ mod tests {
         for month in 1..=12 {
             assert_eq!(
                 GregorianDateBuilder::new()
-                    .month(month)
-                    .day_of_month(0)
+                    .month_and_day(month, 0)
                     .build()
                     .err(),
                 Some(Error::InvalidDayOfMonth)
@@ -262,8 +261,7 @@ mod tests {
         for month in [1, 3, 5, 7, 8, 10, 12] {
             assert_eq!(
                 GregorianDateBuilder::new()
-                    .month(month)
-                    .day_of_month(32)
+                    .month_and_day(month, 32)
                     .build()
                     .err(),
                 Some(Error::InvalidDayOfMonth)
@@ -273,8 +271,7 @@ mod tests {
         for month in [4, 6, 9, 11] {
             assert_eq!(
                 GregorianDateBuilder::new()
-                    .month(month)
-                    .day_of_month(31)
+                    .month_and_day(month, 31)
                     .build()
                     .err(),
                 Some(Error::InvalidDayOfMonth)
@@ -283,8 +280,7 @@ mod tests {
 
         assert_eq!(
             GregorianDateBuilder::new()
-                .month(2)
-                .day_of_month(29)
+                .month_and_day(2, 29)
                 .build()
                 .err(),
             Some(Error::InvalidDayOfMonth)
@@ -292,8 +288,7 @@ mod tests {
         assert_eq!(
             GregorianDateBuilder::new()
                 .year(1624)
-                .month(2)
-                .day_of_month(30)
+                .month_and_day(2, 30)
                 .build()
                 .err(),
             Some(Error::InvalidDayOfMonth)
@@ -305,7 +300,7 @@ mod tests {
         for month in [1, 3, 5, 7, 8, 10, 12] {
             assert_eq!(
                 GregorianDateBuilder::new()
-                    .month(month)
+                    .month_and_day(month, 1)
                     .build()
                     .unwrap()
                     .month_days(),
@@ -315,7 +310,7 @@ mod tests {
         for month in [4, 6, 9, 11] {
             assert_eq!(
                 GregorianDateBuilder::new()
-                    .month(month)
+                    .month_and_day(month, 1)
                     .build()
                     .unwrap()
                     .month_days(),
@@ -324,7 +319,7 @@ mod tests {
         }
         assert_eq!(
             GregorianDateBuilder::new()
-                .month(2)
+                .month_and_day(2, 1)
                 .build()
                 .unwrap()
                 .month_days(),
@@ -334,7 +329,7 @@ mod tests {
         assert_eq!(
             GregorianDateBuilder::new()
                 .year(1624)
-                .month(2)
+                .month_and_day(2, 1)
                 .build()
                 .unwrap()
                 .month_days(),
@@ -365,9 +360,12 @@ mod tests {
     #[test]
     fn day_of_year() {
         for month in 1..12 {
-            let initial_date = GregorianDateBuilder::new().month(month).build().unwrap();
+            let initial_date = GregorianDateBuilder::new()
+                .month_and_day(month, 1)
+                .build()
+                .unwrap();
             let final_date = GregorianDateBuilder::new()
-                .month(month + 1)
+                .month_and_day(month + 1, 1)
                 .build()
                 .unwrap();
             assert_eq!(
