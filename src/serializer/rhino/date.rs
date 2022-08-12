@@ -44,6 +44,25 @@ impl GregorianDate {
         self.day_of_month
     }
 
+    pub const fn day_of_year(&self) -> DayOfYear {
+        let extra_day = if self.is_leap_year() { 1u16 } else { 0u16 };
+        match self.month {
+            1 => self.day_of_month as DayOfYear,
+            2 => 31 + self.day_of_month as DayOfYear,
+            3 => 59 + self.day_of_month as DayOfYear + extra_day,
+            4 => 90 + self.day_of_month as DayOfYear + extra_day,
+            5 => 120 + self.day_of_month as DayOfYear + extra_day,
+            6 => 151 + self.day_of_month as DayOfYear + extra_day,
+            7 => 181 + self.day_of_month as DayOfYear + extra_day,
+            8 => 212 + self.day_of_month as DayOfYear + extra_day,
+            9 => 243 + self.day_of_month as DayOfYear + extra_day,
+            10 => 273 + self.day_of_month as DayOfYear + extra_day,
+            11 => 304 + self.day_of_month as DayOfYear + extra_day,
+            12 => 334 + self.day_of_month as DayOfYear + extra_day,
+            _ => 0,
+        }
+    }
+
     pub const fn is_leap_year(&self) -> bool {
         (1624 <= self.year)
             && (0 == (self.year % 4))
@@ -61,25 +80,6 @@ impl GregorianDate {
                     28
                 }
             }
-            _ => 0,
-        }
-    }
-
-    pub const fn day_of_the_year(&self) -> DayOfYear {
-        let extra_day = if self.is_leap_year() { 1u16 } else { 0u16 };
-        match self.month {
-            1 => self.day_of_month as DayOfYear,
-            2 => 31 + self.day_of_month as DayOfYear,
-            3 => 59 + self.day_of_month as DayOfYear + extra_day,
-            4 => 90 + self.day_of_month as DayOfYear + extra_day,
-            5 => 120 + self.day_of_month as DayOfYear + extra_day,
-            6 => 151 + self.day_of_month as DayOfYear + extra_day,
-            7 => 181 + self.day_of_month as DayOfYear + extra_day,
-            8 => 212 + self.day_of_month as DayOfYear + extra_day,
-            9 => 243 + self.day_of_month as DayOfYear + extra_day,
-            10 => 273 + self.day_of_month as DayOfYear + extra_day,
-            11 => 304 + self.day_of_month as DayOfYear + extra_day,
-            12 => 334 + self.day_of_month as DayOfYear + extra_day,
             _ => 0,
         }
     }
