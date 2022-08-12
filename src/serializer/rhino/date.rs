@@ -32,24 +32,6 @@ impl Display for Error {
 impl GregorianDate {
     const FIRST_YEAR: Year = 1582;
 
-    pub const fn new(year: Year, month: Month, day_of_month: DayOfMonth) -> Result<Self, Error> {
-        let date = GregorianDate {
-            year,
-            month,
-            day_of_month,
-        };
-        if Self::FIRST_YEAR > year {
-            return Err(Error::InvalidYear);
-        }
-        if 1 > month || 12 < month {
-            return Err(Error::InvalidMonth);
-        }
-        if 1 > day_of_month || date.days_of_month() < day_of_month {
-            return Err(Error::InvalidDayOfMonth);
-        }
-        Ok(date)
-    }
-
     pub const fn year(&self) -> Year {
         self.year
     }
@@ -103,26 +85,97 @@ impl GregorianDate {
     }
 }
 
+pub struct GregorianDateBuilder {
+    year: Year,
+    month: Month,
+    day_of_month: DayOfMonth,
+}
+
+impl GregorianDateBuilder {
+    pub const fn new() -> Self {
+        GregorianDateBuilder {
+            year: GregorianDate::FIRST_YEAR,
+            month: 1,
+            day_of_month: 1,
+        }
+    }
+
+    pub const fn year(mut self, year: Year) -> Self {
+        self.year = year;
+        self
+    }
+
+    pub const fn month(mut self, month: Month) -> Self {
+        self.month = month;
+        self
+    }
+
+    pub const fn day_of_month(mut self, day_of_month: DayOfMonth) -> Self {
+        self.day_of_month = day_of_month;
+        self
+    }
+
+    pub const fn build(&self) -> Result<GregorianDate, Error> {
+        let date = GregorianDate {
+            year: self.year,
+            month: self.month,
+            day_of_month: self.day_of_month,
+        };
+        if GregorianDate::FIRST_YEAR > date.year {
+            return Err(Error::InvalidYear);
+        }
+        if 1 > date.month || 12 < date.month {
+            return Err(Error::InvalidMonth);
+        }
+        if 1 > self.day_of_month || date.days_of_month() < date.day_of_month {
+            return Err(Error::InvalidDayOfMonth);
+        }
+        Ok(date)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
+    fn default_build() {
+        assert_eq!(
+            GregorianDateBuilder::new().build().ok(),
+            Some(GregorianDate {
+                year: 1582,
+                month: 1,
+                day_of_month: 1
+            })
+        );
+    }
+
+    #[test]
+    fn valid_build() {
+        assert_eq!(
+            GregorianDateBuilder::new()
+                .year(1989)
+                .month(11)
+                .day_of_month(11)
+                .build()
+                .ok(),
+            Some(GregorianDate {
+                year: 1989,
+                month: 11,
+                day_of_month: 11
+            })
+        );
+    }
+
+    #[test]
     fn valid_year() {
-        match GregorianDate::new(1582, 1, 1) {
-            Ok(date) => {
-                assert_eq!(1582, date.year)
-            }
-            Err(_) => {
-                assert!(false)
-            }
-        }
+        assert!(GregorianDateBuilder::new().year(1582).build().is_ok());
     }
 
     #[test]
     fn invalid_year() {
         assert_eq!(
-            GregorianDate::new(1581, 1, 1).err(),
+            GregorianDateBuilder::new().year(1581).build().err(),
             Some(Error::InvalidYear)
         );
     }
@@ -130,26 +183,18 @@ mod tests {
     #[test]
     fn valid_month() {
         for month in 1..=12 {
-            assert!(GregorianDate::new(1582, month, 1).is_ok());
-            match GregorianDate::new(1582, month, 1) {
-                Ok(date) => {
-                    assert_eq!(month, date.month);
-                }
-                Err(_) => {
-                    assert!(false);
-                }
-            }
+            assert!(GregorianDateBuilder::new().month(month).build().is_ok());
         }
     }
 
     #[test]
     fn invalid_month() {
         assert_eq!(
-            GregorianDate::new(1582, 0, 1).err(),
+            GregorianDateBuilder::new().month(0).build().err(),
             Some(Error::InvalidMonth)
         );
         assert_eq!(
-            GregorianDate::new(1582, 13, 1).err(),
+            GregorianDateBuilder::new().month(13).build().err(),
             Some(Error::InvalidMonth)
         );
     }
@@ -158,50 +203,39 @@ mod tests {
     fn valid_day() {
         for month in [1, 3, 5, 7, 8, 10, 12] {
             for day in 1..=31 {
-                match GregorianDate::new(1582, month, day) {
-                    Ok(date) => {
-                        assert_eq!(day, date.day_of_month);
-                    }
-                    Err(_) => {
-                        assert!(false);
-                    }
-                }
+                assert!(GregorianDateBuilder::new()
+                    .month(month)
+                    .day_of_month(day)
+                    .build()
+                    .is_ok());
             }
         }
 
         for month in [4, 6, 9, 1] {
             for day in 1..=30 {
-                match GregorianDate::new(1582, month, day) {
-                    Ok(date) => {
-                        assert_eq!(day, date.day_of_month);
-                    }
-                    Err(_) => {
-                        assert!(false);
-                    }
-                }
+                assert!(GregorianDateBuilder::new()
+                    .month(month)
+                    .day_of_month(day)
+                    .build()
+                    .is_ok());
             }
         }
 
         for day in 1..=28 {
-            match GregorianDate::new(1582, 2, day) {
-                Ok(date) => {
-                    assert_eq!(day, date.day_of_month);
-                }
-                Err(_) => {
-                    assert!(false);
-                }
-            }
+            assert!(GregorianDateBuilder::new()
+                .month(2)
+                .day_of_month(day)
+                .build()
+                .is_ok());
         }
 
         for day in 1..=29 {
-            match GregorianDate::new(1624, 2, day) {
-                Ok(date) => {
-                    assert_eq!(day, date.day_of_month);
-                }
-                Err(_) => {
-                    assert!(false);
-                }
-            }
+            assert!(GregorianDateBuilder::new()
+                .year(1624)
+                .month(2)
+                .day_of_month(day)
+                .build()
+                .is_ok());
         }
     }
 
@@ -209,60 +243,105 @@ mod tests {
     fn invalid_day() {
         for month in 1..=12 {
             assert_eq!(
-                GregorianDate::new(1582, month, 0).err(),
+                GregorianDateBuilder::new()
+                    .month(month)
+                    .day_of_month(0)
+                    .build()
+                    .err(),
                 Some(Error::InvalidDayOfMonth)
             );
         }
         for month in [1, 3, 5, 7, 8, 10, 12] {
             assert_eq!(
-                GregorianDate::new(1582, month, 32).err(),
+                GregorianDateBuilder::new()
+                    .month(month)
+                    .day_of_month(32)
+                    .build()
+                    .err(),
                 Some(Error::InvalidDayOfMonth)
             );
-            assert!(GregorianDate::new(1582, month, 32).is_err());
         }
 
         for month in [4, 6, 9, 11] {
             assert_eq!(
-                GregorianDate::new(1582, month, 31).err(),
+                GregorianDateBuilder::new()
+                    .month(month)
+                    .day_of_month(31)
+                    .build()
+                    .err(),
                 Some(Error::InvalidDayOfMonth)
             );
         }
 
-        assert!(GregorianDate::new(1582, 2, 29).is_err());
-        assert!(GregorianDate::new(1624, 2, 30).is_err());
+        assert_eq!(
+            GregorianDateBuilder::new()
+                .month(2)
+                .day_of_month(29)
+                .build()
+                .err(),
+            Some(Error::InvalidDayOfMonth)
+        );
+        assert_eq!(
+            GregorianDateBuilder::new()
+                .year(1624)
+                .month(2)
+                .day_of_month(30)
+                .build()
+                .err(),
+            Some(Error::InvalidDayOfMonth)
+        );
     }
 
     #[test]
     fn days_of_month() {
         for month in [1, 3, 5, 7, 8, 10, 12] {
             assert_eq!(
-                GregorianDate::new(1582, month, 1).unwrap().days_of_month(),
-                31
-            );
-            assert_eq!(
-                GregorianDate::new(1624, month, 1).unwrap().days_of_month(),
+                GregorianDateBuilder::new()
+                    .month(month)
+                    .build()
+                    .unwrap()
+                    .days_of_month(),
                 31
             );
         }
         for month in [4, 6, 9, 11] {
             assert_eq!(
-                GregorianDate::new(1582, month, 1).unwrap().days_of_month(),
-                30
-            );
-            assert_eq!(
-                GregorianDate::new(1624, month, 1).unwrap().days_of_month(),
+                GregorianDateBuilder::new()
+                    .month(month)
+                    .build()
+                    .unwrap()
+                    .days_of_month(),
                 30
             );
         }
-        assert_eq!(GregorianDate::new(1582, 2, 1).unwrap().days_of_month(), 28);
-        assert_eq!(GregorianDate::new(1624, 2, 1).unwrap().days_of_month(), 29);
+        assert_eq!(
+            GregorianDateBuilder::new()
+                .month(2)
+                .build()
+                .unwrap()
+                .days_of_month(),
+            28
+        );
+
+        assert_eq!(
+            GregorianDateBuilder::new()
+                .year(1624)
+                .month(2)
+                .build()
+                .unwrap()
+                .days_of_month(),
+            29
+        );
     }
 
     #[test]
     fn day_of_the_year() {
         for month in 1..12 {
-            let initial_date = GregorianDate::new(1582, month, 1).unwrap();
-            let final_date = GregorianDate::new(1582, month + 1, 1).unwrap();
+            let initial_date = GregorianDateBuilder::new().month(month).build().unwrap();
+            let final_date = GregorianDateBuilder::new()
+                .month(month + 1)
+                .build()
+                .unwrap();
             assert_eq!(
                 final_date.day_of_the_year() - initial_date.day_of_the_year(),
                 initial_date.days_of_month() as u16
@@ -272,27 +351,97 @@ mod tests {
 
     #[test]
     fn is_leap_year() {
-        assert!(GregorianDate::new(1624, 1, 1).unwrap().is_leap_year());
-        assert!(GregorianDate::new(1628, 1, 1).unwrap().is_leap_year());
-        assert!(GregorianDate::new(2000, 1, 1).unwrap().is_leap_year());
+        assert!(GregorianDateBuilder::new()
+            .year(1624)
+            .build()
+            .unwrap()
+            .is_leap_year());
+        assert!(GregorianDateBuilder::new()
+            .year(1628)
+            .build()
+            .unwrap()
+            .is_leap_year());
+        assert!(GregorianDateBuilder::new()
+            .year(2000)
+            .build()
+            .unwrap()
+            .is_leap_year());
 
-        assert!(!GregorianDate::new(1620, 1, 1).unwrap().is_leap_year());
-        assert!(!GregorianDate::new(1625, 1, 1).unwrap().is_leap_year());
-        assert!(!GregorianDate::new(1700, 1, 1).unwrap().is_leap_year());
+        assert!(!GregorianDateBuilder::new()
+            .year(1620)
+            .build()
+            .unwrap()
+            .is_leap_year());
+        assert!(!GregorianDateBuilder::new()
+            .year(1625)
+            .build()
+            .unwrap()
+            .is_leap_year());
+        assert!(!GregorianDateBuilder::new()
+            .year(1700)
+            .build()
+            .unwrap()
+            .is_leap_year());
     }
 
     #[test]
     fn cmp_impl() {
         assert_eq!(
-            GregorianDate::new(1624, 1, 1).unwrap(),
-            GregorianDate::new(1624, 1, 1).unwrap()
+            GregorianDate {
+                year: 1624,
+                month: 1,
+                day_of_month: 1
+            },
+            GregorianDate {
+                year: 1624,
+                month: 1,
+                day_of_month: 1
+            }
         );
         assert_ne!(
-            GregorianDate::new(1624, 1, 1).unwrap(),
-            GregorianDate::new(1624, 1, 2).unwrap()
+            GregorianDate {
+                year: 1624,
+                month: 1,
+                day_of_month: 1
+            },
+            GregorianDate {
+                year: 1624,
+                month: 1,
+                day_of_month: 2
+            }
         );
-        assert!(GregorianDate::new(1625, 1, 1).unwrap() > GregorianDate::new(1624, 2, 2).unwrap());
-        assert!(GregorianDate::new(1624, 2, 1).unwrap() > GregorianDate::new(1624, 1, 2).unwrap());
-        assert!(GregorianDate::new(1624, 1, 2).unwrap() > GregorianDate::new(1624, 1, 1).unwrap());
+        assert!(
+            GregorianDate {
+                year: 1625,
+                month: 1,
+                day_of_month: 1
+            } > GregorianDate {
+                year: 1624,
+                month: 2,
+                day_of_month: 2
+            }
+        );
+        assert!(
+            GregorianDate {
+                year: 1624,
+                month: 2,
+                day_of_month: 1
+            } > GregorianDate {
+                year: 1624,
+                month: 1,
+                day_of_month: 2
+            }
+        );
+        assert!(
+            GregorianDate {
+                year: 1624,
+                month: 1,
+                day_of_month: 2
+            } > GregorianDate {
+                year: 1624,
+                month: 1,
+                day_of_month: 1
+            }
+        );
     }
 }
