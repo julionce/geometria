@@ -33,6 +33,20 @@ impl TryFrom<u8> for Version {
     }
 }
 
+impl Into<u8> for Version {
+    fn into(self) -> u8 {
+        match self {
+            Version::V1 => 1,
+            Version::V2 => 2,
+            Version::V3 => 3,
+            Version::V4 => 4,
+            Version::V50 => 50,
+            Version::V60 => 60,
+            Version::V70 => 70,
+        }
+    }
+}
+
 #[derive(Copy, Clone, Default)]
 struct ChunkBegin {
     typecode: u32,
