@@ -32,7 +32,9 @@ impl Begin {
 }
 
 impl Deserialize for chunk::Begin {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
     where
         D: Deserializer,
     {

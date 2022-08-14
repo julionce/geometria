@@ -4,7 +4,9 @@ pub trait Deserialize
 where
     Self: Sized,
 {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    type Error;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
     where
         D: Deserializer;
 }

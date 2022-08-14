@@ -82,7 +82,9 @@ where
 }
 
 impl Deserialize for Version {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
     where
         D: Deserializer,
     {
@@ -113,7 +115,9 @@ impl Deserialize for Version {
 }
 
 impl Deserialize for ChunkVersion {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
     where
         D: Deserializer,
     {
@@ -129,7 +133,9 @@ impl<T> Deserialize for Chunk<T>
 where
     T: DeserializeChunk,
 {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
     where
         D: Deserializer,
     {
@@ -197,7 +203,9 @@ impl DeserializeChunk for String {
 }
 
 impl Deserialize for ChunkString {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
     where
         D: Deserializer,
     {
@@ -212,7 +220,9 @@ impl Deserialize for ChunkString {
 }
 
 impl Deserialize for Comment {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
     where
         D: Deserializer,
     {
@@ -222,7 +232,9 @@ impl Deserialize for Comment {
 }
 
 impl Deserialize for StartSection {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
     where
         D: Deserializer,
     {
@@ -264,7 +276,9 @@ impl Deserialize for StartSection {
 }
 
 impl Deserialize for StringWithLength {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
     where
         D: Deserializer,
     {
@@ -279,7 +293,9 @@ impl Deserialize for StringWithLength {
 }
 
 impl Deserialize for Time {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
     where
         D: Deserializer,
     {
@@ -297,7 +313,9 @@ impl Deserialize for Time {
 }
 
 impl Deserialize for RevisionHistory {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
     where
         D: Deserializer,
     {
@@ -327,7 +345,9 @@ impl Deserialize for RevisionHistory {
 }
 
 impl Deserialize for Notes {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
     where
         D: Deserializer,
     {
@@ -357,7 +377,9 @@ impl Deserialize for Notes {
 }
 
 impl Deserialize for Properties {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
     where
         D: Deserializer,
     {

@@ -6,7 +6,9 @@ pub struct Header;
 const FILE_BEGIN: &[u8] = "3D Geometry File Format ".as_bytes();
 
 impl Deserialize for Header {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
     where
         D: Deserializer,
     {
