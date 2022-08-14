@@ -1,6 +1,7 @@
 mod chunk;
 mod deserialize;
 mod deserializer;
+mod header;
 mod reader;
 mod typecode;
 mod version;
@@ -10,10 +11,6 @@ use deserializer::Deserializer;
 use version::Version;
 
 use std::{io::Read, io::SeekFrom, mem};
-
-const FILE_BEGIN: &[u8] = "3D Geometry File Format ".as_bytes();
-
-struct Header;
 
 struct ChunkVersion {
     minor: u8,
@@ -82,22 +79,6 @@ where
     fn deserialize<D>(deserializer: &mut D, chunk_begin: chunk::Begin) -> Result<Self, String>
     where
         D: Deserializer;
-}
-
-impl Deserialize for Header {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
-    where
-        D: Deserializer,
-    {
-        let mut buffer = [0; FILE_BEGIN.len()];
-        match deserializer.deserialize_bytes(&mut buffer) {
-            Ok(()) => match FILE_BEGIN == buffer {
-                true => Ok(Header {}),
-                false => Err("3dm file error: invalid file begin".to_string()),
-            },
-            Err(e) => Err(e),
-        }
-    }
 }
 
 impl Deserialize for Version {
@@ -419,6 +400,7 @@ impl Deserialize for Properties {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use header::Header;
     use reader::Reader;
     use std::{fs::File, io::BufReader};
 
