@@ -72,9 +72,9 @@ pub struct Version {
     platform: Platform,
 }
 
-pub struct NormalFormatVersion(u64);
+pub struct NormalFormatVersion(pub u64);
 
-pub struct DateFormatVersion(u64);
+pub struct DateFormatVersion(pub u64);
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
