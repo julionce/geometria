@@ -1,51 +1,12 @@
 mod typecode;
+mod version;
 
 use std::{convert::TryFrom, io::Read, io::Seek, io::SeekFrom, mem};
+use version::Version;
 
 const FILE_BEGIN: &[u8] = "3D Geometry File Format ".as_bytes();
 
 struct Header;
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-enum Version {
-    V1,
-    V2,
-    V3,
-    V4,
-    V50,
-    V60,
-    V70,
-}
-
-impl TryFrom<u8> for Version {
-    type Error = String;
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            1 => Ok(Version::V1),
-            2 => Ok(Version::V2),
-            3 => Ok(Version::V3),
-            4 => Ok(Version::V4),
-            50 => Ok(Version::V50),
-            60 => Ok(Version::V60),
-            70 => Ok(Version::V70),
-            _ => Err(format!("3dm file error: invalid version {}", value)),
-        }
-    }
-}
-
-impl Into<u8> for Version {
-    fn into(self) -> u8 {
-        match self {
-            Version::V1 => 1,
-            Version::V2 => 2,
-            Version::V3 => 3,
-            Version::V4 => 4,
-            Version::V50 => 50,
-            Version::V60 => 60,
-            Version::V70 => 70,
-        }
-    }
-}
 
 #[derive(Copy, Clone, Default)]
 struct ChunkBegin {
