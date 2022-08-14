@@ -141,6 +141,17 @@ impl Version {
     }
 }
 
+impl Default for Version {
+    fn default() -> Self {
+        Version {
+            major_version: 0,
+            minor_version: 0,
+            date: MIN_DATE,
+            platform: 0,
+        }
+    }
+}
+
 impl TryFrom<NormalFormatVersion> for Version {
     type Error = Error;
 
