@@ -1,3 +1,4 @@
+mod chunk;
 mod typecode;
 mod version;
 
@@ -8,41 +9,17 @@ const FILE_BEGIN: &[u8] = "3D Geometry File Format ".as_bytes();
 
 struct Header;
 
-#[derive(Copy, Clone, Default)]
-struct ChunkBegin {
-    typecode: u32,
-    value: i64,
-    initial_position: u64,
-}
-
 struct ChunkVersion {
     minor: u8,
     major: u8,
 }
 
 struct Chunk<T> {
-    begin: ChunkBegin,
+    begin: chunk::Begin,
     data: T,
 }
 
 struct ChunkString(String);
-
-impl ChunkBegin {
-    fn size_of_length(version: Version) -> u8 {
-        match version {
-            Version::V1 | Version::V2 | Version::V3 | Version::V4 => 4u8,
-            _ => 8u8,
-        }
-    }
-
-    fn is_unsigned(self) -> bool {
-        0 == (typecode::SHORT & self.typecode)
-            || typecode::RGB == self.typecode
-            || typecode::RGBDISPLAY == self.typecode
-            || typecode::PROPERTIES_OPENNURBS_VERSION == self.typecode
-            || typecode::OBJECT_RECORD_TYPE == self.typecode
-    }
-}
 
 struct Comment(String);
 
@@ -104,8 +81,8 @@ where
     fn version(&self) -> Version;
     fn set_version(&mut self, version: Version);
 
-    fn chunk_begin(&self) -> ChunkBegin;
-    fn set_chunk_begin(&mut self, chunk_begin: ChunkBegin);
+    fn chunk_begin(&self) -> chunk::Begin;
+    fn set_chunk_begin(&mut self, chunk_begin: chunk::Begin);
 }
 
 struct ReadDeserializer<'a, T>
@@ -114,7 +91,7 @@ where
 {
     stream: &'a mut T,
     version: Version,
-    chunk_begin: ChunkBegin,
+    chunk_begin: chunk::Begin,
 }
 
 impl<T> Read for ReadDeserializer<'_, T>
@@ -186,11 +163,11 @@ where
         self.version = version;
     }
 
-    fn chunk_begin(&self) -> ChunkBegin {
+    fn chunk_begin(&self) -> chunk::Begin {
         return self.chunk_begin;
     }
 
-    fn set_chunk_begin(&mut self, chunk_begin: ChunkBegin) {
+    fn set_chunk_begin(&mut self, chunk_begin: chunk::Begin) {
         self.chunk_begin = chunk_begin;
     }
 }
@@ -208,7 +185,7 @@ trait DeserializeChunk
 where
     Self: Sized,
 {
-    fn deserialize<D>(deserializer: &mut D, chunk_begin: ChunkBegin) -> Result<Self, String>
+    fn deserialize<D>(deserializer: &mut D, chunk_begin: chunk::Begin) -> Result<Self, String>
     where
         D: Deserializer;
 }
@@ -260,32 +237,6 @@ impl Deserialize for Version {
     }
 }
 
-impl Deserialize for ChunkBegin {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
-    where
-        D: Deserializer,
-    {
-        let mut chunk_begin = ChunkBegin {
-            typecode: deserializer.deserialize_u32().unwrap(),
-            value: 0i64,
-            initial_position: 0u64,
-        };
-        if 8 == ChunkBegin::size_of_length(deserializer.version()) {
-            chunk_begin.value = deserializer.deserialize_i64().unwrap();
-        } else if chunk_begin.is_unsigned() {
-            chunk_begin.value = deserializer.deserialize_u32().unwrap() as i64;
-        } else {
-            chunk_begin.value = deserializer.deserialize_i32().unwrap() as i64;
-        }
-        match deserializer.stream_position() {
-            Ok(position) => chunk_begin.initial_position = position,
-            Err(e) => return Err(format!("{}", e)),
-        }
-        deserializer.set_chunk_begin(chunk_begin);
-        Ok(chunk_begin)
-    }
-}
-
 impl Deserialize for ChunkVersion {
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
     where
@@ -307,7 +258,7 @@ where
     where
         D: Deserializer,
     {
-        let begin = ChunkBegin::deserialize(deserializer).unwrap();
+        let begin = chunk::Begin::deserialize(deserializer).unwrap();
         let data = T::deserialize(deserializer, begin).unwrap();
         Ok(Chunk::<T> {
             begin: begin,
@@ -321,7 +272,7 @@ struct BackwardEmptyChunk;
 struct ForwardChunk;
 
 impl DeserializeChunk for EmptyChunk {
-    fn deserialize<D>(_deserializer: &mut D, _chunk_begin: ChunkBegin) -> Result<Self, String>
+    fn deserialize<D>(_deserializer: &mut D, _chunk_begin: chunk::Begin) -> Result<Self, String>
     where
         D: Deserializer,
     {
@@ -330,14 +281,14 @@ impl DeserializeChunk for EmptyChunk {
 }
 
 impl DeserializeChunk for BackwardEmptyChunk {
-    fn deserialize<D>(deserializer: &mut D, chunk_begin: ChunkBegin) -> Result<Self, String>
+    fn deserialize<D>(deserializer: &mut D, chunk_begin: chunk::Begin) -> Result<Self, String>
     where
         D: Deserializer,
     {
         deserializer
             .seek(SeekFrom::Current(
                 -(mem::size_of_val(&chunk_begin.typecode) as i64
-                    + ChunkBegin::size_of_length(deserializer.version()) as i64),
+                    + chunk::Begin::size_of_length(deserializer.version()) as i64),
             ))
             .unwrap();
         Ok(BackwardEmptyChunk {})
@@ -345,7 +296,7 @@ impl DeserializeChunk for BackwardEmptyChunk {
 }
 
 impl DeserializeChunk for ForwardChunk {
-    fn deserialize<D>(deserializer: &mut D, chunk_begin: ChunkBegin) -> Result<Self, String>
+    fn deserialize<D>(deserializer: &mut D, chunk_begin: chunk::Begin) -> Result<Self, String>
     where
         D: Deserializer,
     {
@@ -357,7 +308,7 @@ impl DeserializeChunk for ForwardChunk {
 }
 
 impl DeserializeChunk for String {
-    fn deserialize<D>(deserializer: &mut D, chunk_begin: ChunkBegin) -> Result<Self, String>
+    fn deserialize<D>(deserializer: &mut D, chunk_begin: chunk::Begin) -> Result<Self, String>
     where
         D: Deserializer,
     {
@@ -375,7 +326,7 @@ impl Deserialize for ChunkString {
     where
         D: Deserializer,
     {
-        let chunk_begin = ChunkBegin::deserialize(deserializer).unwrap();
+        let chunk_begin = chunk::Begin::deserialize(deserializer).unwrap();
         let mut buf = String::default();
         deserializer
             .take(chunk_begin.value as u64)
@@ -539,7 +490,7 @@ impl Deserialize for Properties {
         if Version::V1 == deserializer.version() {
             deserializer.seek(SeekFrom::Start(32u64)).unwrap();
             loop {
-                let chunk_begin = ChunkBegin::deserialize(deserializer).unwrap();
+                let chunk_begin = chunk::Begin::deserialize(deserializer).unwrap();
                 match chunk_begin.typecode {
                     typecode::COMMENTBLOCK => {
                         let _comment = String::deserialize(deserializer, chunk_begin).unwrap();
@@ -582,7 +533,7 @@ mod tests {
         let mut deserializer = ReadDeserializer {
             stream: &mut BufReader::new(file),
             version: Version::V1,
-            chunk_begin: ChunkBegin::default(),
+            chunk_begin: chunk::Begin::default(),
         };
         match Header::deserialize(&mut deserializer) {
             Ok(_) => assert!(true),
