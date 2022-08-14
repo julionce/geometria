@@ -13,12 +13,12 @@ impl Deserialize for Header {
         D: Deserializer,
     {
         let mut buffer = [0; FILE_BEGIN.len()];
-        match deserializer.deserialize_bytes(&mut buffer) {
+        match deserializer.read_exact(&mut buffer) {
             Ok(()) => match FILE_BEGIN == buffer {
                 true => Ok(Header {}),
                 false => Err("3dm file error: invalid file begin".to_string()),
             },
-            Err(e) => Err(e),
+            Err(e) => Err(format!("{}", e)),
         }
     }
 }
