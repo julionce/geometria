@@ -1,9 +1,11 @@
 mod chunk;
+mod deserialize;
 mod deserializer;
 mod reader;
 mod typecode;
 mod version;
 
+use deserialize::Deserialize;
 use deserializer::Deserializer;
 use version::Version;
 
@@ -71,15 +73,6 @@ struct Properties {
     version: on_version::Version,
     revision_history: RevisionHistory,
     notes: Notes,
-}
-
-trait Deserialize
-where
-    Self: Sized,
-{
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, String>
-    where
-        D: Deserializer;
 }
 
 trait DeserializeChunk
