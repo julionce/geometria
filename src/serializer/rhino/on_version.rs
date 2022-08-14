@@ -1,4 +1,8 @@
-use super::date::{DayOfMonth, GregorianDate, GregorianDateBuilder, Month, Year};
+use super::{
+    date::{DayOfMonth, GregorianDate, GregorianDateBuilder, Month, Year},
+    deserialize::Deserialize,
+    deserializer::Deserializer,
+};
 
 struct Mask {
     position: u8,
@@ -225,6 +229,24 @@ impl Into<DateFormatVersion> for Version {
         ret.0 = ret.0 + (self.date().month() as u64 * 10 * 100);
         ret.0 = ret.0 + (self.date().year() as u64 * 10 * 100 * 100);
         ret
+    }
+}
+
+impl Deserialize for Version {
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
+    where
+        D: Deserializer,
+    {
+        let raw_version = deserializer.chunk_begin().value as u64;
+        match Version::try_from(DateFormatVersion(raw_version)) {
+            Ok(version) => Ok(version),
+            Err(_) => match Version::try_from(NormalFormatVersion(raw_version)) {
+                Ok(version) => Ok(version),
+                Err(_) => Err("3dm file error: invalid opennurbs version".to_string()),
+            },
+        }
     }
 }
 
