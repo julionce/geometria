@@ -88,7 +88,7 @@ impl Deserialize for ChunkVersion {
     where
         D: Deserializer,
     {
-        let raw_version = deserializer.deserialize_u8()?;
+        let raw_version = u8::deserialize(deserializer)?;
         Ok(ChunkVersion {
             minor: raw_version | 0x0F,
             major: raw_version >> 4,
@@ -249,7 +249,7 @@ impl Deserialize for StringWithLength {
     where
         D: Deserializer,
     {
-        let length = deserializer.deserialize_u32().unwrap();
+        let length = u32::deserialize(deserializer)?;
         let mut string = String::default();
         deserializer
             .take(length as u64)
@@ -267,14 +267,14 @@ impl Deserialize for Time {
         D: Deserializer,
     {
         let mut time = Time::default();
-        time.second = deserializer.deserialize_u32()?;
-        time.minute = deserializer.deserialize_u32()?;
-        time.hour = deserializer.deserialize_u32()?;
-        time.month_day = deserializer.deserialize_u32()?;
-        time.month = deserializer.deserialize_u32()?;
-        time.year = deserializer.deserialize_u32()?;
-        time.week_day = deserializer.deserialize_u32()?;
-        time.year_day = deserializer.deserialize_u32()?;
+        time.second = u32::deserialize(deserializer)?;
+        time.minute = u32::deserialize(deserializer)?;
+        time.hour = u32::deserialize(deserializer)?;
+        time.month_day = u32::deserialize(deserializer)?;
+        time.month = u32::deserialize(deserializer)?;
+        time.year = u32::deserialize(deserializer)?;
+        time.week_day = u32::deserialize(deserializer)?;
+        time.year_day = u32::deserialize(deserializer)?;
         Ok(time)
     }
 }
@@ -290,11 +290,11 @@ impl Deserialize for RevisionHistory {
         if Version::V1 == deserializer.version() {
             revision_history.created_by = StringWithLength::deserialize(deserializer)?.string;
             revision_history.create_time = Time::deserialize(deserializer)?;
-            deserializer.deserialize_i32()?;
+            i32::deserialize(deserializer)?;
             revision_history.last_edited_by = StringWithLength::deserialize(deserializer)?.string;
             revision_history.last_edit_time = Time::deserialize(deserializer)?;
-            deserializer.deserialize_i32()?;
-            revision_history.revision_count = deserializer.deserialize_i32()?;
+            i32::deserialize(deserializer)?;
+            revision_history.revision_count = i32::deserialize(deserializer)?;
         } else {
             let chunk_version = ChunkVersion::deserialize(deserializer)?;
             if 1u8 == chunk_version.major {
@@ -304,7 +304,7 @@ impl Deserialize for RevisionHistory {
                 // TODO
                 // revision_history.last_edited_by = WStringWithLength::deserialize(deserializer)?;
                 revision_history.last_edit_time = Time::deserialize(deserializer)?;
-                revision_history.revision_count = deserializer.deserialize_i32()?;
+                revision_history.revision_count = i32::deserialize(deserializer)?;
             }
         }
         Ok(revision_history)
@@ -320,23 +320,23 @@ impl Deserialize for Notes {
     {
         let mut notes = Notes::default();
         if Version::V1 == deserializer.version() {
-            notes.visible = deserializer.deserialize_i32()? != 0i32;
-            notes.window_left = deserializer.deserialize_i32()?;
-            notes.window_top = deserializer.deserialize_i32()?;
-            notes.window_right = deserializer.deserialize_i32()?;
-            notes.window_bottom = deserializer.deserialize_i32()?;
+            notes.visible = i32::deserialize(deserializer)? != 0i32;
+            notes.window_left = i32::deserialize(deserializer)?;
+            notes.window_top = i32::deserialize(deserializer)?;
+            notes.window_right = i32::deserialize(deserializer)?;
+            notes.window_bottom = i32::deserialize(deserializer)?;
             notes.data = StringWithLength::deserialize(deserializer)?.string;
         } else {
             let chunk_version = ChunkVersion::deserialize(deserializer)?;
             if 1u8 == chunk_version.major {
-                notes.html_encoded = deserializer.deserialize_i32()? != 0i32;
+                notes.html_encoded = i32::deserialize(deserializer)? != 0i32;
                 // TODO
                 // notes.data = WStringWithLength::deserialize(deserializer)?.string;
-                notes.visible = deserializer.deserialize_i32()? != 0i32;
-                notes.window_left = deserializer.deserialize_i32()?;
-                notes.window_top = deserializer.deserialize_i32()?;
-                notes.window_right = deserializer.deserialize_i32()?;
-                notes.window_bottom = deserializer.deserialize_i32()?;
+                notes.visible = i32::deserialize(deserializer)? != 0i32;
+                notes.window_left = i32::deserialize(deserializer)?;
+                notes.window_top = i32::deserialize(deserializer)?;
+                notes.window_right = i32::deserialize(deserializer)?;
+                notes.window_bottom = i32::deserialize(deserializer)?;
             }
         }
         Ok(notes)

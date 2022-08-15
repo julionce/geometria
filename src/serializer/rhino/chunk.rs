@@ -39,16 +39,16 @@ impl Deserialize for chunk::Begin {
         D: Deserializer,
     {
         let mut chunk_begin = chunk::Begin {
-            typecode: deserializer.deserialize_u32().unwrap(),
+            typecode: u32::deserialize(deserializer)?,
             value: 0i64,
             initial_position: 0u64,
         };
         if 8 == chunk::Begin::size_of_length(deserializer.version()) {
-            chunk_begin.value = deserializer.deserialize_i64().unwrap();
+            chunk_begin.value = i64::deserialize(deserializer)?;
         } else if chunk_begin.is_unsigned() {
-            chunk_begin.value = deserializer.deserialize_u32().unwrap() as i64;
+            chunk_begin.value = u32::deserialize(deserializer)? as i64;
         } else {
-            chunk_begin.value = deserializer.deserialize_i32().unwrap() as i64;
+            chunk_begin.value = i32::deserialize(deserializer)? as i64;
         }
         match deserializer.stream_position() {
             Ok(position) => chunk_begin.initial_position = position,
