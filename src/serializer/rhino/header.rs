@@ -15,7 +15,7 @@ impl Display for HeaderError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::InvalidHeader => write!(f, "invalid header"),
-            Self::IoError(e) => write!(f, "{} deserializing the header", e),
+            Self::IoError(e) => write!(f, "{}", e),
         }
     }
 }

@@ -81,39 +81,6 @@ where
         D: Deserializer;
 }
 
-impl Deserialize for Version {
-    type Error = String;
-
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
-        const ERROR_MSG: &str = "3dm file error: unable to read file version";
-        let mut buffer = [0; 8];
-        match deserializer.deserialize_bytes(&mut buffer) {
-            Ok(()) => {
-                match buffer
-                    .iter()
-                    .skip_while(|x| **x == ' ' as u8)
-                    .try_fold(0u8, |acc, x| match (*x as char).to_digit(10) {
-                        Some(d) => Ok(acc * 10u8 + (d as u8)),
-                        None => Err(""),
-                    }) {
-                    Ok(v) => match Version::try_from(v) {
-                        Ok(version) => {
-                            deserializer.set_version(version);
-                            Ok(version)
-                        }
-                        Err(e) => Err(e),
-                    },
-                    Err(_) => Err(ERROR_MSG.to_string()),
-                }
-            }
-            Err(_) => Err(ERROR_MSG.to_string()),
-        }
-    }
-}
-
 impl Deserialize for ChunkVersion {
     type Error = String;
 
