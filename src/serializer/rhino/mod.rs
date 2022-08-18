@@ -3,11 +3,13 @@ mod deserialize;
 mod deserializer;
 mod header;
 mod reader;
+mod time;
 mod typecode;
 mod version;
 
 use deserialize::Deserialize;
 use deserializer::Deserializer;
+use time::Time;
 use version::Version;
 
 use std::{io::Read, io::SeekFrom, mem};
@@ -31,18 +33,6 @@ struct StartSection;
 struct StringWithLength {
     length: u32,
     string: String,
-}
-
-#[derive(Default)]
-struct Time {
-    second: u32,
-    minute: u32,
-    hour: u32,
-    month_day: u32,
-    month: u32,
-    year: u32,
-    week_day: u32,
-    year_day: u32,
 }
 
 #[derive(Default)]
@@ -256,26 +246,6 @@ impl Deserialize for StringWithLength {
             .read_to_string(&mut string)
             .unwrap();
         Ok(StringWithLength { length, string })
-    }
-}
-
-impl Deserialize for Time {
-    type Error = String;
-
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
-        let mut time = Time::default();
-        time.second = u32::deserialize(deserializer)?;
-        time.minute = u32::deserialize(deserializer)?;
-        time.hour = u32::deserialize(deserializer)?;
-        time.month_day = u32::deserialize(deserializer)?;
-        time.month = u32::deserialize(deserializer)?;
-        time.year = u32::deserialize(deserializer)?;
-        time.week_day = u32::deserialize(deserializer)?;
-        time.year_day = u32::deserialize(deserializer)?;
-        Ok(time)
     }
 }
 
