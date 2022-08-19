@@ -1,5 +1,5 @@
 use super::typecode;
-use super::version;
+use super::version::Version as FileVersion;
 // TODO: remove
 use super::*;
 
@@ -12,12 +12,9 @@ pub struct Begin {
 
 impl Begin {
     // TODO: mark as private
-    pub fn size_of_length(version: version::Version) -> u8 {
+    pub fn size_of_length(version: FileVersion) -> u8 {
         match version {
-            version::Version::V1
-            | version::Version::V2
-            | version::Version::V3
-            | version::Version::V4 => 4u8,
+            FileVersion::V1 | FileVersion::V2 | FileVersion::V3 | FileVersion::V4 => 4u8,
             _ => 8u8,
         }
     }
