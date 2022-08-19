@@ -361,13 +361,12 @@ mod tests {
     use super::*;
     use header::Header;
     use reader::Reader;
-    use std::{fs::File, io::BufReader};
+    use std::fs::File;
 
     #[test]
     fn serialize_3dm() {
-        let file = File::open("src/serializer/rhino/test_file/v1/v1_three_points.3dm").unwrap();
         let mut deserializer = Reader {
-            stream: &mut BufReader::new(file),
+            stream: File::open("src/serializer/rhino/test_file/v1/v1_three_points.3dm").unwrap(),
             version: Version::V1,
             chunk_begin: chunk::Begin::default(),
         };

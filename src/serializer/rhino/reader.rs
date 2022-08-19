@@ -4,16 +4,16 @@ use super::version::Version;
 
 use std::{io::Read, io::Seek, io::SeekFrom};
 
-pub struct Reader<'a, T>
+pub struct Reader<T>
 where
     T: Read + Seek,
 {
-    pub stream: &'a mut T,
+    pub stream: T,
     pub version: Version,
     pub chunk_begin: chunk::Begin,
 }
 
-impl<T> Read for Reader<'_, T>
+impl<T> Read for Reader<T>
 where
     T: Read + Seek,
 {
@@ -22,7 +22,7 @@ where
     }
 }
 
-impl<T> Seek for Reader<'_, T>
+impl<T> Seek for Reader<T>
 where
     T: Read + Seek,
 {
@@ -31,7 +31,7 @@ where
     }
 }
 
-impl<T> Deserializer for Reader<'_, T>
+impl<T> Deserializer for Reader<T>
 where
     T: Read + Seek,
 {
