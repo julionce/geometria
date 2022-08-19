@@ -55,3 +55,56 @@ impl Deserialize for chunk::Begin {
         Ok(chunk_begin)
     }
 }
+
+pub struct Version {
+    inner: u8,
+}
+
+impl Version {
+    pub fn minor(&self) -> u8 {
+        self.inner & 0x0F
+    }
+
+    pub fn major(&self) -> u8 {
+        self.inner >> 4
+    }
+}
+
+impl Deserialize for Version {
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
+    where
+        D: Deserializer,
+    {
+        Ok(Self {
+            inner: u8::deserialize(deserializer)?,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::Cursor;
+
+    use crate::serializer::rhino::{deserialize::Deserialize, reader::Reader, version};
+
+    use super::{Begin, Version};
+
+    #[test]
+    fn deserialize_version() {
+        let major_version = 1u8;
+        let minor_version = 2u8;
+        let data = [major_version << 4 | (minor_version & 0x0F); 1];
+
+        let mut deserializer = Reader {
+            stream: &mut Cursor::new(data),
+            version: version::Version::V1,
+            chunk_begin: Begin::default(),
+        };
+
+        let version = Version::deserialize(&mut deserializer).unwrap();
+        assert_eq!(major_version, version.major());
+        assert_eq!(minor_version, version.minor());
+    }
+}

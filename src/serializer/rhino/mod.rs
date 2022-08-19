@@ -14,11 +14,6 @@ use version::Version;
 
 use std::{io::Read, io::SeekFrom, mem};
 
-struct ChunkVersion {
-    minor: u8,
-    major: u8,
-}
-
 struct Chunk<T> {
     begin: chunk::Begin,
     data: T,
@@ -69,21 +64,6 @@ where
     fn deserialize<D>(deserializer: &mut D, chunk_begin: chunk::Begin) -> Result<Self, String>
     where
         D: Deserializer;
-}
-
-impl Deserialize for ChunkVersion {
-    type Error = String;
-
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
-        let raw_version = u8::deserialize(deserializer)?;
-        Ok(ChunkVersion {
-            minor: raw_version | 0x0F,
-            major: raw_version >> 4,
-        })
-    }
 }
 
 impl<T> Deserialize for Chunk<T>
@@ -266,8 +246,8 @@ impl Deserialize for RevisionHistory {
             i32::deserialize(deserializer)?;
             revision_history.revision_count = i32::deserialize(deserializer)?;
         } else {
-            let chunk_version = ChunkVersion::deserialize(deserializer)?;
-            if 1u8 == chunk_version.major {
+            let chunk_version = chunk::Version::deserialize(deserializer)?;
+            if 1u8 == chunk_version.major() {
                 // TODO
                 // revision_history.created_by = WStringWithLength::deserialize(deserializer)?;
                 revision_history.create_time = Time::deserialize(deserializer)?;
@@ -297,8 +277,8 @@ impl Deserialize for Notes {
             notes.window_bottom = i32::deserialize(deserializer)?;
             notes.data = StringWithLength::deserialize(deserializer)?.string;
         } else {
-            let chunk_version = ChunkVersion::deserialize(deserializer)?;
-            if 1u8 == chunk_version.major {
+            let chunk_version = chunk::Version::deserialize(deserializer)?;
+            if 1u8 == chunk_version.major() {
                 notes.html_encoded = i32::deserialize(deserializer)? != 0i32;
                 // TODO
                 // notes.data = WStringWithLength::deserialize(deserializer)?.string;
