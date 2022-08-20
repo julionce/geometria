@@ -1,11 +1,11 @@
-use super::typecode;
+use super::deserialize::Deserialize;
+use super::deserializer::Deserializer;
+use super::typecode::{self, Typecode};
 use super::version::Version as FileVersion;
-// TODO: remove
-use super::*;
 
 #[derive(Copy, Clone, Default)]
 pub struct Begin {
-    pub typecode: u32,
+    pub typecode: Typecode,
     pub value: i64,
     pub initial_position: u64,
 }
@@ -28,19 +28,19 @@ impl Begin {
     }
 }
 
-impl Deserialize for chunk::Begin {
+impl Deserialize for Begin {
     type Error = String;
 
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
     where
         D: Deserializer,
     {
-        let mut chunk_begin = chunk::Begin {
+        let mut chunk_begin = Begin {
             typecode: u32::deserialize(deserializer)?,
             value: 0i64,
             initial_position: 0u64,
         };
-        if 8 == chunk::Begin::size_of_length(deserializer.version()) {
+        if 8 == Begin::size_of_length(deserializer.version()) {
             chunk_begin.value = i64::deserialize(deserializer)?;
         } else if chunk_begin.is_unsigned() {
             chunk_begin.value = u32::deserialize(deserializer)? as i64;
