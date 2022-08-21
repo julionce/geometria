@@ -3,12 +3,14 @@ mod deserialize;
 mod deserializer;
 mod header;
 mod reader;
+mod string;
 mod time;
 mod typecode;
 mod version;
 
 use deserialize::Deserialize;
 use deserializer::Deserializer;
+use string::StringWithLength;
 use time::Time;
 use version::Version;
 
@@ -24,11 +26,6 @@ struct ChunkString(String);
 struct Comment(String);
 
 struct StartSection;
-
-struct StringWithLength {
-    length: u32,
-    string: String,
-}
 
 #[derive(Default)]
 struct RevisionHistory {
@@ -212,23 +209,6 @@ impl Deserialize for StartSection {
     }
 }
 
-impl Deserialize for StringWithLength {
-    type Error = String;
-
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
-        let length = u32::deserialize(deserializer)?;
-        let mut string = String::default();
-        deserializer
-            .take(length as u64)
-            .read_to_string(&mut string)
-            .unwrap();
-        Ok(StringWithLength { length, string })
-    }
-}
-
 impl Deserialize for RevisionHistory {
     type Error = String;
 
@@ -238,10 +218,10 @@ impl Deserialize for RevisionHistory {
     {
         let mut revision_history = RevisionHistory::default();
         if Version::V1 == deserializer.version() {
-            revision_history.created_by = StringWithLength::deserialize(deserializer)?.string;
+            revision_history.created_by = StringWithLength::deserialize(deserializer)?.into();
             revision_history.create_time = Time::deserialize(deserializer)?;
             i32::deserialize(deserializer)?;
-            revision_history.last_edited_by = StringWithLength::deserialize(deserializer)?.string;
+            revision_history.last_edited_by = StringWithLength::deserialize(deserializer)?.into();
             revision_history.last_edit_time = Time::deserialize(deserializer)?;
             i32::deserialize(deserializer)?;
             revision_history.revision_count = i32::deserialize(deserializer)?;
@@ -275,7 +255,7 @@ impl Deserialize for Notes {
             notes.window_top = i32::deserialize(deserializer)?;
             notes.window_right = i32::deserialize(deserializer)?;
             notes.window_bottom = i32::deserialize(deserializer)?;
-            notes.data = StringWithLength::deserialize(deserializer)?.string;
+            notes.data = StringWithLength::deserialize(deserializer)?.into();
         } else {
             let chunk_version = chunk::Version::deserialize(deserializer)?;
             if 1u8 == chunk_version.major() {
