@@ -1,17 +1,19 @@
 mod chunk;
 mod comment;
+mod date;
 mod deserialize;
 mod deserializer;
 mod header;
+mod on_version;
 mod reader;
 mod string;
 mod time;
 mod typecode;
 mod version;
 
-use comment::Comment;
 use deserialize::Deserialize;
 use deserializer::Deserializer;
+use on_version::Version as OnVersion;
 use string::StringWithLength;
 use time::Time;
 use version::Version;
@@ -47,7 +49,7 @@ struct Notes {
 
 #[derive(Default)]
 struct Properties {
-    version: on_version::Version,
+    version: OnVersion,
     revision_history: RevisionHistory,
     notes: Notes,
 }
@@ -287,7 +289,7 @@ impl Deserialize for Properties {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{comment::Comment, *};
     use header::Header;
     use reader::Reader;
     use std::fs::File;

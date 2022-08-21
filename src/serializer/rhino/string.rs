@@ -76,10 +76,10 @@ mod tests {
     use crate::serializer::rhino::chunk::Begin;
     use crate::serializer::rhino::deserialize::Deserialize;
     use crate::serializer::rhino::reader::Reader;
-    use crate::serializer::rhino::string::StringWithChunkValue;
     use crate::serializer::rhino::typecode;
     use crate::serializer::rhino::version::Version as FileVersion;
 
+    use super::StringWithChunkValue;
     use super::StringWithLength;
 
     #[test]
