@@ -23,8 +23,6 @@ struct Chunk<T> {
     data: T,
 }
 
-struct ChunkString(String);
-
 struct StartSection;
 
 #[derive(Default)]
@@ -133,23 +131,6 @@ impl DeserializeChunk for String {
             .read_to_string(&mut buf)
             .unwrap();
         Ok(buf)
-    }
-}
-
-impl Deserialize for ChunkString {
-    type Error = String;
-
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
-        let chunk_begin = chunk::Begin::deserialize(deserializer).unwrap();
-        let mut buf = String::default();
-        deserializer
-            .take(chunk_begin.value as u64)
-            .read_to_string(&mut buf)
-            .unwrap();
-        Ok(ChunkString(buf))
     }
 }
 
