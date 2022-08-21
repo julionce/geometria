@@ -101,7 +101,7 @@ mod tests {
     }
 
     #[test]
-    fn deserialize_string_with_length_and_invalid_length() {
+    fn deserialize_string_with_invalid_length() {
         let string = "The string".to_string();
         let size: u32 = (string.len() + 1) as u32;
         let mut data: Vec<u8> = vec![];
@@ -118,11 +118,11 @@ mod tests {
     }
 
     #[test]
-    fn deserialize_string_with_value() {
+    fn deserialize_string_with_chunk_value() {
         let string = "The string".to_string();
-        let size: u32 = string.len() as u32;
+        let value: u32 = string.len() as u32;
         let mut data: Vec<u8> = vec![];
-        data.extend(size.to_le_bytes().iter().clone());
+        data.extend(value.to_le_bytes().iter().clone());
         data.extend(string.as_bytes().iter().clone());
 
         let mut deserializer = Reader {
@@ -136,11 +136,11 @@ mod tests {
     }
 
     #[test]
-    fn deserialize_string_with_value_and_invalid_length() {
+    fn deserialize_string_with_invalid_chunk_value() {
         let string = "The string".to_string();
-        let size: u32 = (string.len() + 1) as u32;
+        let value: u32 = (string.len() + 1) as u32;
         let mut data: Vec<u8> = vec![];
-        data.extend(size.to_le_bytes().iter().clone());
+        data.extend(value.to_le_bytes().iter().clone());
         data.extend(string.as_bytes().iter().clone());
 
         let mut deserializer = Reader {
@@ -153,11 +153,11 @@ mod tests {
     }
 
     #[test]
-    fn deserialize_string_with_value_and_negative_length() {
+    fn deserialize_string_with_negative_chunk_value() {
         let string = "The string".to_string();
-        let size: i32 = -(string.len() as i32);
+        let value: i32 = -(string.len() as i32);
         let mut data: Vec<u8> = vec![];
-        data.extend(size.to_le_bytes().iter().clone());
+        data.extend(value.to_le_bytes().iter().clone());
         data.extend(string.as_bytes().iter().clone());
 
         let mut deserializer = Reader {
