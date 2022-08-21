@@ -76,6 +76,12 @@ impl Value {
     }
 }
 
+impl From<Value> for i64 {
+    fn from(value: Value) -> Self {
+        value.0
+    }
+}
+
 impl Deserialize for Value {
     type Error = String;
 
