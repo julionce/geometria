@@ -32,6 +32,43 @@ impl From<StringWithLength> for String {
     }
 }
 
+pub struct StringWithChunkValue(pub String);
+
+impl Deserialize for StringWithChunkValue {
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
+    where
+        D: Deserializer,
+    {
+        let chunk_value: i64 = chunk::Value::deserialize(deserializer)?.into();
+        if chunk_value > 0 {
+            let mut string = String::new();
+            match deserializer
+                .take(chunk_value as u64)
+                .read_to_string(&mut string)
+            {
+                Ok(size) => {
+                    if size as u64 == chunk_value as u64 {
+                        Ok(StringWithChunkValue(string))
+                    } else {
+                        Err("Invalid length".to_string())
+                    }
+                }
+                Err(e) => Err(format!("{}", e)),
+            }
+        } else {
+            Err("Negative length".to_string())
+        }
+    }
+}
+
+impl From<StringWithChunkValue> for String {
+    fn from(value: StringWithChunkValue) -> Self {
+        value.0
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;
@@ -78,5 +115,61 @@ mod tests {
         };
 
         assert!(StringWithLength::deserialize(&mut deserializer).is_err());
+    }
+
+    #[test]
+    fn deserialize_string_with_value() {
+        let string = "The string".to_string();
+        let size: u32 = string.len() as u32;
+        let mut data: Vec<u8> = vec![];
+        data.extend(size.to_le_bytes().iter().clone());
+        data.extend(string.as_bytes().iter().clone());
+
+        let mut deserializer = Reader {
+            stream: &mut Cursor::new(data),
+            version: FileVersion::V1,
+            chunk_begin: Begin::default(),
+        };
+
+        let string_with_chunk_value = StringWithChunkValue::deserialize(&mut deserializer).unwrap();
+        assert_eq!(string, String::from(string_with_chunk_value));
+    }
+
+    #[test]
+    fn deserialize_string_with_value_and_invalid_length() {
+        let string = "The string".to_string();
+        let size: u32 = (string.len() + 1) as u32;
+        let mut data: Vec<u8> = vec![];
+        data.extend(size.to_le_bytes().iter().clone());
+        data.extend(string.as_bytes().iter().clone());
+
+        let mut deserializer = Reader {
+            stream: &mut Cursor::new(data),
+            version: FileVersion::V1,
+            chunk_begin: Begin::default(),
+        };
+
+        assert!(StringWithChunkValue::deserialize(&mut deserializer).is_err());
+    }
+
+    #[test]
+    fn deserialize_string_with_value_and_negative_length() {
+        let string = "The string".to_string();
+        let size: i32 = -(string.len() as i32);
+        let mut data: Vec<u8> = vec![];
+        data.extend(size.to_le_bytes().iter().clone());
+        data.extend(string.as_bytes().iter().clone());
+
+        let mut deserializer = Reader {
+            stream: &mut Cursor::new(data),
+            version: FileVersion::V1,
+            chunk_begin: Begin {
+                typecode: typecode::SHORT,
+                value: 0,
+                initial_position: 0,
+            },
+        };
+
+        assert!(StringWithChunkValue::deserialize(&mut deserializer).is_err());
     }
 }
