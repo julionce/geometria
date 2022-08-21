@@ -1,4 +1,5 @@
 mod chunk;
+mod comment;
 mod deserialize;
 mod deserializer;
 mod header;
@@ -8,6 +9,7 @@ mod time;
 mod typecode;
 mod version;
 
+use comment::Comment;
 use deserialize::Deserialize;
 use deserializer::Deserializer;
 use string::StringWithLength;
@@ -22,8 +24,6 @@ struct Chunk<T> {
 }
 
 struct ChunkString(String);
-
-struct Comment(String);
 
 struct StartSection;
 
@@ -150,18 +150,6 @@ impl Deserialize for ChunkString {
             .read_to_string(&mut buf)
             .unwrap();
         Ok(ChunkString(buf))
-    }
-}
-
-impl Deserialize for Comment {
-    type Error = String;
-
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
-        let comment = Chunk::<String>::deserialize(deserializer).unwrap().data;
-        Ok(Comment(comment))
     }
 }
 
