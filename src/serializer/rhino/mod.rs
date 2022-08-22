@@ -17,9 +17,12 @@ use deserializer::Deserializer;
 use on_version::Version as OnVersion;
 use string::StringWithLength;
 use time::Time;
+use typecode::Typecode;
 use version::Version;
 
-use std::{io::Read, io::SeekFrom, mem};
+use std::{io::Read, io::SeekFrom};
+
+use self::{chunk::Value, comment::Comment};
 
 struct Chunk<T> {
     begin: chunk::Begin,
@@ -210,10 +213,19 @@ impl Deserialize for Properties {
         if Version::V1 == deserializer.version() {
             deserializer.seek(SeekFrom::Start(32u64)).unwrap();
             loop {
-                let chunk_begin = chunk::Begin::deserialize(deserializer).unwrap();
-                match chunk_begin.typecode {
+                let backup_position = deserializer.stream_position().unwrap();
+                let typecode = Typecode::deserialize(deserializer)?;
+                // TODO: implement TryFrom<Value> for u64.
+                let value: i64 = Value::deserialize(deserializer)?.into();
+                if 0 > value {
+                    return Err("Invalid Chunk value".to_string());
+                }
+                let final_position = deserializer.stream_position().unwrap() + value as u64;
+                match typecode {
                     typecode::COMMENTBLOCK => {
-                        let _comment = String::deserialize(deserializer, chunk_begin).unwrap();
+                        deserializer.seek(SeekFrom::Start(backup_position)).unwrap();
+                        // TODO: process _comment
+                        let _comment = Comment::deserialize(deserializer)?;
                     }
                     typecode::SUMMARY => {
                         properties.revision_history = RevisionHistory::deserialize(deserializer)?;
@@ -230,9 +242,7 @@ impl Deserialize for Properties {
                     _ => {}
                 }
                 // TODO: create a ScopedChunkBegin
-                match deserializer.seek(SeekFrom::Start(
-                    chunk_begin.initial_position + chunk_begin.value as u64,
-                )) {
+                match deserializer.seek(SeekFrom::Start(final_position)) {
                     Ok(_) => {}
                     Err(e) => return Err(format!("{}", e)),
                 }
