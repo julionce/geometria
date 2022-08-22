@@ -6,6 +6,7 @@ mod deserializer;
 mod header;
 mod on_version;
 mod reader;
+mod start_section;
 mod string;
 mod time;
 mod typecode;
@@ -24,8 +25,6 @@ struct Chunk<T> {
     begin: chunk::Begin,
     data: T,
 }
-
-struct StartSection;
 
 #[derive(Default)]
 struct RevisionHistory {
@@ -133,50 +132,6 @@ impl DeserializeChunk for String {
             .read_to_string(&mut buf)
             .unwrap();
         Ok(buf)
-    }
-}
-
-impl Deserialize for StartSection {
-    type Error = String;
-
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
-        let initial_position = SeekFrom::Start(deserializer.stream_position().unwrap());
-        if Version::V1 == deserializer.version() {
-            loop {
-                let empty_chunk = Chunk::<BackwardEmptyChunk>::deserialize(deserializer).unwrap();
-                match empty_chunk.begin.typecode {
-                    typecode::SUMMARY
-                    | typecode::BITMAPPREVIEW
-                    | typecode::UNIT_AND_TOLERANCES
-                    | typecode::VIEWPORT
-                    | typecode::LAYER
-                    | typecode::RENDERMESHPARAMS
-                    | typecode::CURRENTLAYER
-                    | typecode::ANNOTATION_SETTINGS
-                    | typecode::NOTES
-                    | typecode::NAMED_CPLANE
-                    | typecode::NAMED_VIEW => {
-                        let _forward_chunk =
-                            Chunk::<ForwardChunk>::deserialize(deserializer).unwrap();
-                        let _testing = false;
-                    }
-                    _ => {
-                        if typecode::TABLE == empty_chunk.begin.typecode & 0xFFFF0000 {
-                            deserializer.set_version(Version::V2);
-                        }
-                        break;
-                    }
-                }
-            }
-        }
-
-        if Version::V1 == deserializer.version() {
-            deserializer.seek(initial_position).unwrap();
-        }
-        Ok(StartSection {})
     }
 }
 
@@ -289,7 +244,7 @@ impl Deserialize for Properties {
 
 #[cfg(test)]
 mod tests {
-    use super::{comment::Comment, *};
+    use super::{comment::Comment, start_section::StartSection, *};
     use header::Header;
     use reader::Reader;
     use std::fs::File;
