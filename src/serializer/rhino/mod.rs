@@ -20,14 +20,9 @@ use time::Time;
 use typecode::Typecode;
 use version::Version;
 
-use std::{io::Read, io::SeekFrom};
+use std::io::SeekFrom;
 
 use self::{chunk::Value, comment::Comment};
-
-struct Chunk<T> {
-    begin: chunk::Begin,
-    data: T,
-}
 
 #[derive(Default)]
 struct RevisionHistory {
@@ -54,88 +49,6 @@ struct Properties {
     version: OnVersion,
     revision_history: RevisionHistory,
     notes: Notes,
-}
-
-trait DeserializeChunk
-where
-    Self: Sized,
-{
-    fn deserialize<D>(deserializer: &mut D, chunk_begin: chunk::Begin) -> Result<Self, String>
-    where
-        D: Deserializer;
-}
-
-impl<T> Deserialize for Chunk<T>
-where
-    T: DeserializeChunk,
-{
-    type Error = String;
-
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
-        let begin = chunk::Begin::deserialize(deserializer).unwrap();
-        let data = T::deserialize(deserializer, begin).unwrap();
-        Ok(Chunk::<T> {
-            begin: begin,
-            data: data,
-        })
-    }
-}
-
-struct EmptyChunk;
-struct BackwardEmptyChunk;
-struct ForwardChunk;
-
-impl DeserializeChunk for EmptyChunk {
-    fn deserialize<D>(_deserializer: &mut D, _chunk_begin: chunk::Begin) -> Result<Self, String>
-    where
-        D: Deserializer,
-    {
-        Ok(EmptyChunk {})
-    }
-}
-
-impl DeserializeChunk for BackwardEmptyChunk {
-    fn deserialize<D>(deserializer: &mut D, chunk_begin: chunk::Begin) -> Result<Self, String>
-    where
-        D: Deserializer,
-    {
-        deserializer
-            .seek(SeekFrom::Current(
-                -(mem::size_of_val(&chunk_begin.typecode) as i64
-                    + chunk::Begin::size_of_length(deserializer.version()) as i64),
-            ))
-            .unwrap();
-        Ok(BackwardEmptyChunk {})
-    }
-}
-
-impl DeserializeChunk for ForwardChunk {
-    fn deserialize<D>(deserializer: &mut D, chunk_begin: chunk::Begin) -> Result<Self, String>
-    where
-        D: Deserializer,
-    {
-        deserializer
-            .seek(SeekFrom::Current(chunk_begin.value))
-            .unwrap();
-        Ok(ForwardChunk {})
-    }
-}
-
-impl DeserializeChunk for String {
-    fn deserialize<D>(deserializer: &mut D, chunk_begin: chunk::Begin) -> Result<Self, String>
-    where
-        D: Deserializer,
-    {
-        let mut buf = String::default();
-        deserializer
-            .take(chunk_begin.value as u64)
-            .read_to_string(&mut buf)
-            .unwrap();
-        Ok(buf)
-    }
 }
 
 impl Deserialize for RevisionHistory {
