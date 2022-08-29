@@ -2,6 +2,24 @@ use std::io::Read;
 
 use super::{chunk, deserialize::Deserialize, deserializer::Deserializer};
 
+impl Deserialize for String {
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
+    where
+        D: Deserializer,
+    {
+        let mut string = String::new();
+        match deserializer.read_to_string(&mut string) {
+            Ok(_) => Ok(string),
+            Err(e) => {
+                println!("{}", e);
+                Err(format!("{}", e))
+            }
+        }
+    }
+}
+
 pub struct StringWithLength(pub String);
 
 impl Deserialize for StringWithLength {
