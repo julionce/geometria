@@ -135,6 +135,8 @@ where
     stream: &'a mut T,
     offset: u64,
     length: u64,
+    version: FileVersion,
+    begin: Begin,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -174,7 +176,13 @@ impl<'a, T> Chunk<'a, T>
 where
     T: Read + Seek,
 {
-    pub fn new(stream: &'a mut T, offset: u64, length: u64) -> Result<Self, ChunkError> {
+    pub fn new(
+        stream: &'a mut T,
+        offset: u64,
+        length: u64,
+        version: FileVersion,
+        begin: Begin,
+    ) -> Result<Self, ChunkError> {
         if 0 == length {
             Err(ChunkError::EmptyChunk)
         } else {
@@ -182,6 +190,8 @@ where
                 stream,
                 offset,
                 length,
+                version,
+                begin,
             })
         }
     }
@@ -263,6 +273,34 @@ where
             }
             Err(e) => Err(e),
         }
+    }
+}
+
+impl<'a, T> Deserializer for Chunk<'a, T>
+where
+    T: Read + Seek,
+{
+    fn deserialize_bytes(&mut self, buf: &mut [u8]) -> Result<(), String> {
+        match self.read_exact(buf) {
+            Ok(()) => Ok(()),
+            Err(e) => Err(format!("{}", e)),
+        }
+    }
+
+    fn version(&self) -> FileVersion {
+        return self.version;
+    }
+
+    fn set_version(&mut self, version: FileVersion) {
+        self.version = version;
+    }
+
+    fn chunk_begin(&self) -> Begin {
+        return self.begin;
+    }
+
+    fn set_chunk_begin(&mut self, chunk_begin: Begin) {
+        self.begin = chunk_begin;
     }
 }
 
@@ -482,7 +520,7 @@ mod tests {
     fn new_not_empty_chunk() {
         let data = [0; 1];
         let mut stream = Cursor::new(data);
-        let chunk = Chunk::new(&mut stream, 0, 1);
+        let chunk = Chunk::new(&mut stream, 0, 1, FileVersion::V1, Begin::default());
         assert!(chunk.is_ok());
         let result = chunk.ok().unwrap();
         assert_eq!(result.offset, 0);
@@ -493,7 +531,7 @@ mod tests {
     fn new_empty_chunk() {
         let data = [0; 1];
         let mut stream = Cursor::new(data);
-        let chunk = Chunk::new(&mut stream, 0, 0);
+        let chunk = Chunk::new(&mut stream, 0, 0, FileVersion::V1, Begin::default());
         assert_eq!(chunk.err(), Some(ChunkError::EmptyChunk));
     }
 
@@ -501,7 +539,7 @@ mod tests {
     fn chunk_start_position() {
         let data = [0; 10];
         let mut stream = Cursor::new(data);
-        let chunk = Chunk::new(&mut stream, 1, 1).unwrap();
+        let chunk = Chunk::new(&mut stream, 1, 1, FileVersion::V1, Begin::default()).unwrap();
         assert_eq!(1, chunk.start_position());
     }
 
@@ -509,7 +547,7 @@ mod tests {
     fn chunk_end_position() {
         let data = [0; 10];
         let mut stream = Cursor::new(data);
-        let chunk = Chunk::new(&mut stream, 1, 2).unwrap();
+        let chunk = Chunk::new(&mut stream, 1, 2, FileVersion::V1, Begin::default()).unwrap();
         assert_eq!(2, chunk.end_position());
     }
 
@@ -517,7 +555,7 @@ mod tests {
     fn chunk_length() {
         let data = [0; 10];
         let mut stream = Cursor::new(data);
-        let chunk = Chunk::new(&mut stream, 1, 2).unwrap();
+        let chunk = Chunk::new(&mut stream, 1, 2, FileVersion::V1, Begin::default()).unwrap();
         assert_eq!(2, chunk.length());
     }
 
@@ -530,7 +568,14 @@ mod tests {
 
         stream.set_position(offset - 1);
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             let result = chunk.current_position();
             assert!(result.is_err());
             assert_eq!(ChunkError::OutOfBounds, result.err().unwrap());
@@ -538,19 +583,40 @@ mod tests {
 
         stream.set_position(offset);
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             assert_eq!(Some(1), chunk.current_position().ok());
         }
 
         stream.set_position(offset + length - 1);
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             assert_eq!(Some(9), chunk.current_position().ok());
         }
 
         stream.set_position(offset + length);
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             let result = chunk.current_position();
             assert!(result.is_err());
             assert_eq!(ChunkError::OutOfBounds, result.err().unwrap());
@@ -566,7 +632,14 @@ mod tests {
 
         stream.set_position(offset - 1);
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             let result = chunk.remainder_length();
             assert!(result.is_err());
             assert_eq!(ChunkError::OutOfBounds, result.err().unwrap());
@@ -574,19 +647,40 @@ mod tests {
 
         stream.set_position(offset);
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             assert_eq!(Some(length), chunk.remainder_length().ok());
         }
 
         stream.set_position(offset + length - 1);
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             assert_eq!(Some(1), chunk.remainder_length().ok());
         }
 
         stream.set_position(offset + length);
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             let result = chunk.remainder_length();
             assert!(result.is_err());
             assert_eq!(ChunkError::OutOfBounds, result.err().unwrap());
@@ -602,7 +696,14 @@ mod tests {
 
         stream.set_position(offset - 1);
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             let result = chunk.comsumed_length();
             assert!(result.is_err());
             assert_eq!(ChunkError::OutOfBounds, result.err().unwrap());
@@ -610,19 +711,40 @@ mod tests {
 
         stream.set_position(offset);
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             assert_eq!(Some(0), chunk.comsumed_length().ok());
         }
 
         stream.set_position(offset + length - 1);
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             assert_eq!(Some(length - 1), chunk.comsumed_length().ok());
         }
 
         stream.set_position(offset + length);
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             let result = chunk.comsumed_length();
             assert!(result.is_err());
             assert_eq!(ChunkError::OutOfBounds, result.err().unwrap());
@@ -637,13 +759,27 @@ mod tests {
         let length = 9u64;
 
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             assert_eq!(Some(0), chunk.seek(SeekFrom::Start(0)).ok());
         }
         assert_eq!(offset, stream.position());
 
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             assert_eq!(Some(length), chunk.seek(SeekFrom::Start(length)).ok());
         }
         assert_eq!(offset + length, stream.position());
@@ -657,26 +793,57 @@ mod tests {
         let length = 9u64;
 
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             assert_eq!(Some(length), chunk.seek(SeekFrom::End(1)).ok());
         }
         assert_eq!(offset + length, stream.position());
 
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             assert_eq!(Some(length - 1), chunk.seek(SeekFrom::End(0)).ok());
         }
         assert_eq!(offset + length - 1, stream.position());
 
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             assert_eq!(Some(0), chunk.seek(SeekFrom::End(1 - (length as i64))).ok());
         }
         assert_eq!(offset, stream.position());
 
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
-            assert_eq!(ChunkError::InvalidInput, chunk.seek(SeekFrom::End(-(length as i64))).err().unwrap());
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
+            assert_eq!(
+                ChunkError::InvalidInput,
+                chunk.seek(SeekFrom::End(-(length as i64))).err().unwrap()
+            );
         }
         assert_eq!(offset, stream.position());
     }
@@ -690,36 +857,83 @@ mod tests {
 
         stream.set_position(offset - 1);
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
-            assert_eq!(ChunkError::OutOfBounds, chunk.seek(SeekFrom::Current(0)).err().unwrap());
-            assert_eq!(ChunkError::OutOfBounds, chunk.seek(SeekFrom::Current(1)).err().unwrap());
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
+            assert_eq!(
+                ChunkError::OutOfBounds,
+                chunk.seek(SeekFrom::Current(0)).err().unwrap()
+            );
+            assert_eq!(
+                ChunkError::OutOfBounds,
+                chunk.seek(SeekFrom::Current(1)).err().unwrap()
+            );
         }
         assert_eq!(offset - 1, stream.position());
 
         stream.set_position(offset);
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             assert_eq!(Some(0), chunk.seek(SeekFrom::Current(0)).ok());
         }
         assert_eq!(offset, stream.position());
 
         stream.set_position(offset);
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
-            assert_eq!(ChunkError::InvalidInput, chunk.seek(SeekFrom::Current(-1)).err().unwrap());
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
+            assert_eq!(
+                ChunkError::InvalidInput,
+                chunk.seek(SeekFrom::Current(-1)).err().unwrap()
+            );
         }
         assert_eq!(offset, stream.position());
 
         stream.set_position(offset);
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
-            assert_eq!(Some(length), chunk.seek(SeekFrom::Current(length as i64)).ok());
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
+            assert_eq!(
+                Some(length),
+                chunk.seek(SeekFrom::Current(length as i64)).ok()
+            );
         }
         assert_eq!(offset + length, stream.position());
 
         stream.set_position(offset + 1);
         {
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             assert_eq!(Some(0), chunk.seek(SeekFrom::Current(-1)).ok());
         }
         assert_eq!(offset, stream.position());
@@ -734,13 +948,27 @@ mod tests {
 
         {
             let mut buf = [0; 10];
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             assert_eq!(ChunkError::OutOfBounds, chunk.read(&mut buf).err().unwrap());
         }
 
         {
             let mut buf = [0; 10];
-            let mut chunk = Chunk::new(&mut stream, offset, length).unwrap();
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
             chunk.seek(SeekFrom::Start(0));
             assert_eq!(Some(length as usize), chunk.read(&mut buf).ok());
             let mut expected = (1..=9).collect::<Vec<u8>>();
