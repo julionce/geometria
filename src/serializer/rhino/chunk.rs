@@ -977,4 +977,14 @@ mod tests {
         }
         assert_eq!(offset + length, stream.position());
     }
+
+    #[test]
+    fn read_string_from_chunk() {
+        let data = "hello world!".as_bytes();
+        let mut stream = Cursor::new(data);
+        let mut chunk = Chunk::new(&mut stream, 0, 5, FileVersion::V1, Begin::default()).unwrap();
+        let mut result = String::new();
+        chunk.read_to_string(&mut result).unwrap();
+        assert_eq!(result, "hello".to_string());
+    }
 }
