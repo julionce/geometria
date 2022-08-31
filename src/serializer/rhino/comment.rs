@@ -1,7 +1,6 @@
-use super::{
-    deserialize::Deserialize, deserializer::Deserializer, string::StringWithChunkValue, typecode,
-    typecode::Typecode,
-};
+use std::io::Seek;
+
+use super::{chunk::Chunk, deserialize::Deserialize, deserializer::Deserializer, typecode};
 
 pub struct Comment(String);
 
@@ -12,11 +11,9 @@ where
     type Error = String;
 
     fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
-        let typecode = Typecode::deserialize(deserializer)?;
-        if typecode::COMMENTBLOCK == typecode {
-            Ok(Comment(
-                StringWithChunkValue::deserialize(deserializer)?.into(),
-            ))
+        let mut chunk = Chunk::deserialize(deserializer)?;
+        if typecode::COMMENTBLOCK == chunk.chunk_begin().typecode {
+            Ok(Comment(String::deserialize(&mut chunk)?))
         } else {
             Err("Invalid typecode".to_string())
         }
