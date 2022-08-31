@@ -296,6 +296,40 @@ where
     }
 }
 
+impl<'a, T> Deserialize<'a, T> for Chunk<'a, T>
+where
+    T: Deserializer,
+{
+    type Error = String;
+
+    fn deserialize(deserializer: &'a mut T) -> Result<Self, Self::Error> {
+        let typecode = Typecode::deserialize(deserializer)?;
+        let value: i64 = Value::deserialize(deserializer)?.into();
+        if 0 > value {
+            return Err("negative chunk length".to_string());
+        }
+        match deserializer.stream_position() {
+            Ok(offset) => {
+                match Self::new(
+                    deserializer,
+                    offset,
+                    value as u64,
+                    deserializer.version(),
+                    Begin {
+                        typecode: typecode,
+                        value: 0,
+                        initial_position: 0,
+                    },
+                ) {
+                    Ok(chunk) => Ok(chunk),
+                    Err(e) => Err(std::io::Error::from(e).to_string()),
+                }
+            }
+            Err(e) => Err(e.to_string()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::{Cursor, Read, Seek, SeekFrom};
