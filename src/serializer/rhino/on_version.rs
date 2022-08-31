@@ -232,13 +232,13 @@ impl Into<DateFormatVersion> for Version {
     }
 }
 
-impl Deserialize for Version {
+impl<D> Deserialize<'_, D> for Version
+where
+    D: Deserializer,
+{
     type Error = String;
 
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
+    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
         let raw_version = deserializer.chunk_begin().value as u64;
         match Version::try_from(DateFormatVersion(raw_version)) {
             Ok(version) => Ok(version),

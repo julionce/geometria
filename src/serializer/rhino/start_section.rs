@@ -8,13 +8,13 @@ use super::{
 // TODO: add version::Version as member of StartSection.
 pub struct StartSection;
 
-impl Deserialize for StartSection {
+impl<D> Deserialize<'_, D> for StartSection
+where
+    D: Deserializer,
+{
     type Error = String;
 
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
+    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
         let backup_position = SeekFrom::Start(deserializer.stream_position().unwrap());
         if Version::V1 == deserializer.version() {
             loop {

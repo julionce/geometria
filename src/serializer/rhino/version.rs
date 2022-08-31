@@ -59,13 +59,13 @@ impl Into<u8> for Version {
     }
 }
 
-impl Deserialize for Version {
+impl<D> Deserialize<'_, D> for Version
+where
+    D: Deserializer,
+{
     type Error = VersionError;
 
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
+    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
         let mut buffer = [0; 8];
         match deserializer.read_exact(&mut buffer) {
             Ok(()) => {

@@ -2,13 +2,13 @@ use std::io::Read;
 
 use super::{chunk, deserialize::Deserialize, deserializer::Deserializer};
 
-impl Deserialize for String {
+impl<D> Deserialize<'_, D> for String
+where
+    D: Deserializer,
+{
     type Error = String;
 
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
+    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
         let mut string = String::new();
         match deserializer.read_to_string(&mut string) {
             Ok(_) => Ok(string),
@@ -22,13 +22,13 @@ impl Deserialize for String {
 
 pub struct StringWithLength(pub String);
 
-impl Deserialize for StringWithLength {
+impl<D> Deserialize<'_, D> for StringWithLength
+where
+    D: Deserializer,
+{
     type Error = String;
 
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
+    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
         let length = u32::deserialize(deserializer)?;
         let mut string = String::new();
         match deserializer.take(length as u64).read_to_string(&mut string) {
@@ -52,13 +52,13 @@ impl From<StringWithLength> for String {
 
 pub struct StringWithChunkValue(pub String);
 
-impl Deserialize for StringWithChunkValue {
+impl<D> Deserialize<'_, D> for StringWithChunkValue
+where
+    D: Deserializer,
+{
     type Error = String;
 
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
+    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
         let chunk_value: i64 = chunk::Value::deserialize(deserializer)?.into();
         if chunk_value > 0 {
             let mut string = String::new();

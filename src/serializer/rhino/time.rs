@@ -12,13 +12,13 @@ pub struct Time {
     pub year_day: u32,
 }
 
-impl Deserialize for Time {
+impl<D> Deserialize<'_, D> for Time
+where
+    D: Deserializer,
+{
     type Error = String;
 
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
+    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
         Ok(Self {
             second: u32::deserialize(deserializer)?,
             minute: u32::deserialize(deserializer)?,

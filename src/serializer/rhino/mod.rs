@@ -51,13 +51,13 @@ struct Properties {
     notes: Notes,
 }
 
-impl Deserialize for RevisionHistory {
+impl<D> Deserialize<'_, D> for RevisionHistory
+where
+    D: Deserializer,
+{
     type Error = String;
 
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
+    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
         let mut revision_history = RevisionHistory::default();
         if Version::V1 == deserializer.version() {
             revision_history.created_by = StringWithLength::deserialize(deserializer)?.into();
@@ -83,13 +83,13 @@ impl Deserialize for RevisionHistory {
     }
 }
 
-impl Deserialize for Notes {
+impl<D> Deserialize<'_, D> for Notes
+where
+    D: Deserializer,
+{
     type Error = String;
 
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
+    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
         let mut notes = Notes::default();
         if Version::V1 == deserializer.version() {
             notes.visible = i32::deserialize(deserializer)? != 0i32;
@@ -115,13 +115,13 @@ impl Deserialize for Notes {
     }
 }
 
-impl Deserialize for Properties {
+impl<D> Deserialize<'_, D> for Properties
+where
+    D: Deserializer,
+{
     type Error = String;
 
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
+    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
         let mut properties = Properties::default();
         if Version::V1 == deserializer.version() {
             deserializer.seek(SeekFrom::Start(32u64)).unwrap();

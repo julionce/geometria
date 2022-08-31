@@ -30,13 +30,13 @@ impl Begin {
     }
 }
 
-impl Deserialize for Begin {
+impl<D> Deserialize<'_, D> for Begin
+where
+    D: Deserializer,
+{
     type Error = String;
 
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
+    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
         let mut chunk_begin = Begin {
             typecode: u32::deserialize(deserializer)?,
             value: 0i64,
@@ -84,13 +84,13 @@ impl From<Value> for i64 {
     }
 }
 
-impl Deserialize for Value {
+impl<D> Deserialize<'_, D> for Value
+where
+    D: Deserializer,
+{
     type Error = String;
 
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
+    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
         if 8 == Self::size(deserializer.version()) {
             Ok(Self(i64::deserialize(deserializer)?))
         } else if Self::is_unsigned(deserializer.chunk_begin().typecode) {
@@ -115,13 +115,13 @@ impl Version {
     }
 }
 
-impl Deserialize for Version {
+impl<D> Deserialize<'_, D> for Version
+where
+    D: Deserializer,
+{
     type Error = String;
 
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
+    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
         Ok(Self {
             inner: u8::deserialize(deserializer)?,
         })

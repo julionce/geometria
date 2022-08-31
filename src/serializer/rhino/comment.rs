@@ -5,13 +5,13 @@ use super::{
 
 pub struct Comment(String);
 
-impl Deserialize for Comment {
+impl<D> Deserialize<'_, D> for Comment
+where
+    D: Deserializer,
+{
     type Error = String;
 
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
+    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
         let typecode = Typecode::deserialize(deserializer)?;
         if typecode::COMMENTBLOCK == typecode {
             Ok(Comment(

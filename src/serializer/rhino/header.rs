@@ -22,13 +22,13 @@ impl Display for HeaderError {
 
 const FILE_BEGIN: &[u8] = "3D Geometry File Format ".as_bytes();
 
-impl Deserialize for Header {
+impl<D> Deserialize<'_, D> for Header
+where
+    D: Deserializer,
+{
     type Error = HeaderError;
 
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer,
-    {
+    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
         let mut buffer = [0; FILE_BEGIN.len()];
         match deserializer.read_exact(&mut buffer) {
             Ok(()) => match FILE_BEGIN == buffer {

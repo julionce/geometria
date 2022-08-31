@@ -4,26 +4,25 @@ use std::mem;
 
 use super::deserializer::Deserializer;
 
-pub trait Deserialize
+pub trait Deserialize<'de, D>
 where
     Self: Sized,
+    D: Deserializer,
 {
     type Error: Debug + Display;
 
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-    where
-        D: Deserializer;
+    fn deserialize(deserializer: &'de mut D) -> Result<Self, Self::Error>;
 }
 
 macro_rules! impl_deserialize_num {
     ($sty:ty) => {
-        impl Deserialize for $sty {
+        impl<D> Deserialize<'_, D> for $sty
+        where
+            D: Deserializer,
+        {
             type Error = String;
 
-            fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
-            where
-                D: Deserializer,
-            {
+            fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
                 let mut bytes = [0; mem::size_of::<Self>()];
                 match deserializer.read_exact(&mut bytes) {
                     Ok(()) => Ok(Self::from_le_bytes(bytes)),
