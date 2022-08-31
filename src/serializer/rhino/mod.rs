@@ -1,4 +1,4 @@
-mod chunk;
+pub mod chunk;
 mod comment;
 mod date;
 mod deserialize;

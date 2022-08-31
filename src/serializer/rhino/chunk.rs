@@ -208,21 +208,13 @@ where
         self.length
     }
 
-    fn current_position(&mut self) -> std::io::Result<u64> {
-        let stream_position = self.stream.stream_position()?;
-        if stream_position < self.start_position() || stream_position > self.end_position() {
-            Err(std::io::Error::from(ChunkError::OutOfBounds))
-        } else {
-            Ok(stream_position)
-        }
-    }
-
     fn remainder_length(&mut self) -> std::io::Result<u64> {
-        Ok(self.offset + self.length - self.current_position()?)
-    }
-
-    fn comsumed_length(&mut self) -> std::io::Result<u64> {
-        Ok(self.current_position()? - self.start_position())
+        let current_position = self.stream_position()?;
+        Ok(if current_position < self.end_position() {
+            self.length - current_position
+        } else {
+            0
+        })
     }
 }
 
@@ -241,37 +233,37 @@ where
     T: Read + Seek,
 {
     fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
-        let final_position: u64 = match pos {
-            SeekFrom::Start(value) => Ok(self.start_position() + value),
+        let final_position: Option<u64> = match pos {
+            SeekFrom::Start(value) => self.start_position().checked_add(value),
             SeekFrom::End(value) => {
+                // TODO: replace by self.end_position().checked_add_signed(value)
                 if 0 <= value {
-                    Ok(self.end_position() + (value) as u64)
-                } else if (value.abs() as u64) < self.length {
-                    Ok(self.end_position() - (value.abs() as u64))
+                    self.end_position().checked_add(value as u64)
                 } else {
-                    Err(std::io::Error::from(ChunkError::InvalidInput))
+                    self.end_position().checked_sub(value.unsigned_abs())
                 }
             }
             SeekFrom::Current(value) => {
-                let current_position = self.current_position()?;
-                if 0 < value {
-                    Ok(current_position + (value as u64))
-                } else if (value.abs() as u64) <= self.comsumed_length()? {
-                    Ok(current_position - (value.abs() as u64))
+                let current_position = self.stream.stream_position()?;
+                // TODO: replace by current_position().checked_add_signed(value)
+                if 0 <= value {
+                    current_position.checked_add(value as u64)
                 } else {
-                    Err(std::io::Error::from(ChunkError::InvalidInput))
+                    current_position.checked_sub(value.unsigned_abs())
                 }
             }
-        }?;
-        match self.stream.seek(SeekFrom::Start(final_position)) {
-            Ok(value) => {
-                if value == final_position {
-                    Ok(final_position - self.start_position())
+        };
+
+        match final_position {
+            Some(value) => {
+                if value >= self.start_position() {
+                    self.stream.seek(SeekFrom::Start(value))?;
+                    Ok(value - self.start_position())
                 } else {
                     Err(std::io::Error::from(ChunkError::OutOfBounds))
                 }
             }
-            Err(e) => Err(e),
+            None => Err(std::io::Error::from(ChunkError::InvalidInput)),
         }
     }
 }
@@ -560,70 +552,6 @@ mod tests {
     }
 
     #[test]
-    fn chunk_current_position() {
-        let data = [0; 11];
-        let mut stream = Cursor::new(data);
-        let offset = 1u64;
-        let length = 9u64;
-
-        stream.set_position(offset - 1);
-        {
-            let mut chunk = Chunk::new(
-                &mut stream,
-                offset,
-                length,
-                FileVersion::V1,
-                Begin::default(),
-            )
-            .unwrap();
-            let result = chunk.current_position();
-            assert!(result.is_err());
-            assert_eq!(ChunkError::OutOfBounds, result.err().unwrap());
-        }
-
-        stream.set_position(offset);
-        {
-            let mut chunk = Chunk::new(
-                &mut stream,
-                offset,
-                length,
-                FileVersion::V1,
-                Begin::default(),
-            )
-            .unwrap();
-            assert_eq!(Some(1), chunk.current_position().ok());
-        }
-
-        stream.set_position(offset + length - 1);
-        {
-            let mut chunk = Chunk::new(
-                &mut stream,
-                offset,
-                length,
-                FileVersion::V1,
-                Begin::default(),
-            )
-            .unwrap();
-            assert_eq!(Some(9), chunk.current_position().ok());
-        }
-
-        stream.set_position(offset + length);
-        {
-            let mut chunk = Chunk::new(
-                &mut stream,
-                offset,
-                length,
-                FileVersion::V1,
-                Begin::default(),
-            )
-            .unwrap();
-            let result = chunk.current_position();
-            assert!(result.is_err());
-            assert_eq!(ChunkError::OutOfBounds, result.err().unwrap());
-        }
-    }
-
-    #[test]
     fn chunk_remainder_length() {
         let data = [0; 11];
         let mut stream = Cursor::new(data);
@@ -681,83 +609,18 @@ mod tests {
                 Begin::default(),
             )
             .unwrap();
-            let result = chunk.remainder_length();
-            assert!(result.is_err());
-            assert_eq!(ChunkError::OutOfBounds, result.err().unwrap());
+            assert_eq!(Some(0), chunk.remainder_length().ok());
         }
     }
 
     #[test]
-    fn consumed_remainder_length() {
+    fn seek_chunk_from_start_to_start() {
         let data = [0; 11];
         let mut stream = Cursor::new(data);
         let offset = 1u64;
         let length = 9u64;
 
-        stream.set_position(offset - 1);
-        {
-            let mut chunk = Chunk::new(
-                &mut stream,
-                offset,
-                length,
-                FileVersion::V1,
-                Begin::default(),
-            )
-            .unwrap();
-            let result = chunk.comsumed_length();
-            assert!(result.is_err());
-            assert_eq!(ChunkError::OutOfBounds, result.err().unwrap());
-        }
-
-        stream.set_position(offset);
-        {
-            let mut chunk = Chunk::new(
-                &mut stream,
-                offset,
-                length,
-                FileVersion::V1,
-                Begin::default(),
-            )
-            .unwrap();
-            assert_eq!(Some(0), chunk.comsumed_length().ok());
-        }
-
-        stream.set_position(offset + length - 1);
-        {
-            let mut chunk = Chunk::new(
-                &mut stream,
-                offset,
-                length,
-                FileVersion::V1,
-                Begin::default(),
-            )
-            .unwrap();
-            assert_eq!(Some(length - 1), chunk.comsumed_length().ok());
-        }
-
-        stream.set_position(offset + length);
-        {
-            let mut chunk = Chunk::new(
-                &mut stream,
-                offset,
-                length,
-                FileVersion::V1,
-                Begin::default(),
-            )
-            .unwrap();
-            let result = chunk.comsumed_length();
-            assert!(result.is_err());
-            assert_eq!(ChunkError::OutOfBounds, result.err().unwrap());
-        }
-    }
-
-    #[test]
-    fn seek_chunk_from_start() {
-        let data = [0; 11];
-        let mut stream = Cursor::new(data);
-        let offset = 1u64;
-        let length = 9u64;
-
+        stream.set_position(0);
         {
             let mut chunk = Chunk::new(
                 &mut stream,
@@ -770,7 +633,41 @@ mod tests {
             assert_eq!(Some(0), chunk.seek(SeekFrom::Start(0)).ok());
         }
         assert_eq!(offset, stream.position());
+    }
 
+    #[test]
+    fn seek_chunk_from_start_to_end() {
+        let data = [0; 11];
+        let mut stream = Cursor::new(data);
+        let offset = 1u64;
+        let length = 9u64;
+
+        stream.set_position(0);
+        {
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
+            assert_eq!(
+                Some(length - 1),
+                chunk.seek(SeekFrom::Start(length - 1)).ok()
+            );
+        }
+        assert_eq!(offset + length - 1, stream.position());
+    }
+
+    #[test]
+    fn seek_chunk_from_start_beyond_end() {
+        let data = [0; 11];
+        let mut stream = Cursor::new(data);
+        let offset = 1u64;
+        let length = 9u64;
+
+        stream.set_position(0);
         {
             let mut chunk = Chunk::new(
                 &mut stream,
@@ -786,12 +683,13 @@ mod tests {
     }
 
     #[test]
-    fn seek_chunk_from_end() {
+    fn seek_chunk_from_start_overflow() {
         let data = [0; 11];
         let mut stream = Cursor::new(data);
         let offset = 1u64;
         let length = 9u64;
 
+        stream.set_position(0);
         {
             let mut chunk = Chunk::new(
                 &mut stream,
@@ -801,10 +699,22 @@ mod tests {
                 Begin::default(),
             )
             .unwrap();
-            assert_eq!(Some(length), chunk.seek(SeekFrom::End(1)).ok());
+            assert_eq!(
+                ChunkError::InvalidInput,
+                chunk.seek(SeekFrom::Start(u64::MAX)).err().unwrap()
+            );
         }
-        assert_eq!(offset + length, stream.position());
+        assert_eq!(0, stream.position());
+    }
 
+    #[test]
+    fn seek_chunk_from_end_to_end() {
+        let data = [0; 11];
+        let mut stream = Cursor::new(data);
+        let offset = 1u64;
+        let length = 9u64;
+
+        stream.set_position(0);
         {
             let mut chunk = Chunk::new(
                 &mut stream,
@@ -817,7 +727,38 @@ mod tests {
             assert_eq!(Some(length - 1), chunk.seek(SeekFrom::End(0)).ok());
         }
         assert_eq!(offset + length - 1, stream.position());
+    }
 
+    #[test]
+    fn seek_chunk_from_end_beyond_the_end() {
+        let data = [0; 11];
+        let mut stream = Cursor::new(data);
+        let offset = 1u64;
+        let length = 9u64;
+
+        stream.set_position(0);
+        {
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
+            assert_eq!(Some(length), chunk.seek(SeekFrom::End(1)).ok());
+        }
+        assert_eq!(offset + length, stream.position());
+    }
+
+    #[test]
+    fn seek_chunk_from_end_to_start() {
+        let data = [0; 11];
+        let mut stream = Cursor::new(data);
+        let offset = 1u64;
+        let length = 9u64;
+
+        stream.set_position(0);
         {
             let mut chunk = Chunk::new(
                 &mut stream,
@@ -830,32 +771,16 @@ mod tests {
             assert_eq!(Some(0), chunk.seek(SeekFrom::End(1 - (length as i64))).ok());
         }
         assert_eq!(offset, stream.position());
-
-        {
-            let mut chunk = Chunk::new(
-                &mut stream,
-                offset,
-                length,
-                FileVersion::V1,
-                Begin::default(),
-            )
-            .unwrap();
-            assert_eq!(
-                ChunkError::InvalidInput,
-                chunk.seek(SeekFrom::End(-(length as i64))).err().unwrap()
-            );
-        }
-        assert_eq!(offset, stream.position());
     }
 
     #[test]
-    fn seek_chunk_from_current() {
+    fn seek_chunk_from_end_to_negative() {
         let data = [0; 11];
         let mut stream = Cursor::new(data);
         let offset = 1u64;
         let length = 9u64;
 
-        stream.set_position(offset - 1);
+        stream.set_position(0);
         {
             let mut chunk = Chunk::new(
                 &mut stream,
@@ -867,30 +792,20 @@ mod tests {
             .unwrap();
             assert_eq!(
                 ChunkError::OutOfBounds,
-                chunk.seek(SeekFrom::Current(0)).err().unwrap()
-            );
-            assert_eq!(
-                ChunkError::OutOfBounds,
-                chunk.seek(SeekFrom::Current(1)).err().unwrap()
+                chunk.seek(SeekFrom::End(-(length as i64))).err().unwrap()
             );
         }
-        assert_eq!(offset - 1, stream.position());
+        assert_eq!(0, stream.position());
+    }
 
-        stream.set_position(offset);
-        {
-            let mut chunk = Chunk::new(
-                &mut stream,
-                offset,
-                length,
-                FileVersion::V1,
-                Begin::default(),
-            )
-            .unwrap();
-            assert_eq!(Some(0), chunk.seek(SeekFrom::Current(0)).ok());
-        }
-        assert_eq!(offset, stream.position());
+    #[test]
+    fn seek_chunk_from_end_negative_overflow() {
+        let data = [0; 11];
+        let mut stream = Cursor::new(data);
+        let offset = 1u64;
+        let length = 9u64;
 
-        stream.set_position(offset);
+        stream.set_position(0);
         {
             let mut chunk = Chunk::new(
                 &mut stream,
@@ -902,12 +817,97 @@ mod tests {
             .unwrap();
             assert_eq!(
                 ChunkError::InvalidInput,
-                chunk.seek(SeekFrom::Current(-1)).err().unwrap()
+                chunk
+                    .seek(SeekFrom::End(-((offset + length + 1) as i64)))
+                    .err()
+                    .unwrap()
             );
         }
-        assert_eq!(offset, stream.position());
+        assert_eq!(0, stream.position());
+    }
 
-        stream.set_position(offset);
+    #[test]
+    fn seek_chunk_from_end_positive_overflow() {
+        let data = [0; 11];
+        let mut stream = Cursor::new(data);
+        let offset = u64::MAX;
+        let length = 1u64;
+
+        stream.set_position(0);
+        {
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
+            assert_eq!(
+                ChunkError::InvalidInput,
+                chunk.seek(SeekFrom::End(1)).err().unwrap()
+            );
+        }
+        assert_eq!(0, stream.position());
+    }
+
+    #[test]
+    fn seek_chunk_from_current_to_start() {
+        let data = [0; 11];
+        let mut stream = Cursor::new(data);
+        let offset = 1u64;
+        let length = 9u64;
+
+        stream.set_position(0);
+        {
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
+            assert_eq!(Some(0), chunk.seek(SeekFrom::Current(offset as i64)).ok());
+        }
+        assert_eq!(offset, stream.position());
+    }
+
+    #[test]
+    fn seek_chunk_from_current_to_end() {
+        let data = [0; 11];
+        let mut stream = Cursor::new(data);
+        let offset = 1u64;
+        let length = 9u64;
+
+        stream.set_position(0);
+        {
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
+            assert_eq!(
+                Some(length - 1),
+                chunk
+                    .seek(SeekFrom::Current((offset + length - 1) as i64))
+                    .ok()
+            );
+        }
+        assert_eq!(offset + length - 1, stream.position());
+    }
+
+    #[test]
+    fn seek_chunk_from_current_beyond_end() {
+        let data = [0; 11];
+        let mut stream = Cursor::new(data);
+        let offset = 1u64;
+        let length = 9u64;
+
+        stream.set_position(0);
         {
             let mut chunk = Chunk::new(
                 &mut stream,
@@ -919,12 +919,20 @@ mod tests {
             .unwrap();
             assert_eq!(
                 Some(length),
-                chunk.seek(SeekFrom::Current(length as i64)).ok()
+                chunk.seek(SeekFrom::Current((offset + length) as i64)).ok()
             );
         }
         assert_eq!(offset + length, stream.position());
+    }
 
-        stream.set_position(offset + 1);
+    #[test]
+    fn seek_chunk_from_current_to_negative() {
+        let data = [0; 11];
+        let mut stream = Cursor::new(data);
+        let offset = 1u64;
+        let length = 9u64;
+
+        stream.set_position(offset);
         {
             let mut chunk = Chunk::new(
                 &mut stream,
@@ -934,7 +942,63 @@ mod tests {
                 Begin::default(),
             )
             .unwrap();
-            assert_eq!(Some(0), chunk.seek(SeekFrom::Current(-1)).ok());
+            assert_eq!(
+                ChunkError::OutOfBounds,
+                chunk.seek(SeekFrom::Current(-1)).err().unwrap()
+            );
+        }
+        assert_eq!(offset, stream.position());
+    }
+
+    #[test]
+    fn seek_chunk_from_current_negative_overflow() {
+        let data = [0; 11];
+        let mut stream = Cursor::new(data);
+        let offset = 1u64;
+        let length = 9u64;
+
+        stream.set_position(offset);
+        {
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
+            assert_eq!(
+                ChunkError::InvalidInput,
+                chunk
+                    .seek(SeekFrom::Current(-((offset + 1) as i64)))
+                    .err()
+                    .unwrap()
+            );
+        }
+        assert_eq!(offset, stream.position());
+    }
+
+    #[test]
+    fn seek_chunk_from_current_positive_overflow() {
+        let data = [0; 11];
+        let mut stream = Cursor::new(data);
+        let offset = u64::MAX;
+        let length = 1u64;
+
+        stream.set_position(offset);
+        {
+            let mut chunk = Chunk::new(
+                &mut stream,
+                offset,
+                length,
+                FileVersion::V1,
+                Begin::default(),
+            )
+            .unwrap();
+            assert_eq!(
+                ChunkError::InvalidInput,
+                chunk.seek(SeekFrom::Current(1)).err().unwrap()
+            );
         }
         assert_eq!(offset, stream.position());
     }
@@ -969,7 +1033,7 @@ mod tests {
                 Begin::default(),
             )
             .unwrap();
-            chunk.seek(SeekFrom::Start(0));
+            chunk.seek(SeekFrom::Start(0)).unwrap();
             assert_eq!(Some(length as usize), chunk.read(&mut buf).ok());
             let mut expected = (1..=9).collect::<Vec<u8>>();
             expected.push(0);
