@@ -12,17 +12,15 @@ mod time;
 mod typecode;
 mod version;
 
+use chunk::Chunk;
 use deserialize::Deserialize;
 use deserializer::Deserializer;
 use on_version::Version as OnVersion;
 use string::StringWithLength;
 use time::Time;
-use typecode::Typecode;
 use version::Version;
 
-use std::io::SeekFrom;
-
-use self::{chunk::Value, comment::Comment};
+use std::io::{Seek, SeekFrom};
 
 #[derive(Default)]
 struct RevisionHistory {
@@ -126,25 +124,17 @@ where
         if Version::V1 == deserializer.version() {
             deserializer.seek(SeekFrom::Start(32u64)).unwrap();
             loop {
-                let backup_position = deserializer.stream_position().unwrap();
-                let typecode = Typecode::deserialize(deserializer)?;
-                // TODO: implement TryFrom<Value> for u64.
-                let value: i64 = Value::deserialize(deserializer)?.into();
-                if 0 > value {
-                    return Err("Invalid Chunk value".to_string());
-                }
-                let final_position = deserializer.stream_position().unwrap() + value as u64;
-                match typecode {
+                let mut chunk = Chunk::deserialize(deserializer)?;
+                match chunk.chunk_begin().typecode {
                     typecode::COMMENTBLOCK => {
-                        deserializer.seek(SeekFrom::Start(backup_position)).unwrap();
                         // TODO: process _comment
-                        let _comment = Comment::deserialize(deserializer)?;
+                        let _comment = String::deserialize(&mut chunk)?;
                     }
                     typecode::SUMMARY => {
-                        properties.revision_history = RevisionHistory::deserialize(deserializer)?;
+                        properties.revision_history = RevisionHistory::deserialize(&mut chunk)?;
                     }
                     typecode::NOTES => {
-                        properties.notes = Notes::deserialize(deserializer)?;
+                        properties.notes = Notes::deserialize(&mut chunk)?;
                     }
                     typecode::BITMAPPREVIEW => {
                         break;
@@ -154,8 +144,7 @@ where
                     }
                     _ => {}
                 }
-                // TODO: create a ScopedChunkBegin
-                match deserializer.seek(SeekFrom::Start(final_position)) {
+                match chunk.seek(SeekFrom::End(1)) {
                     Ok(_) => {}
                     Err(e) => return Err(format!("{}", e)),
                 }
