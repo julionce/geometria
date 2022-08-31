@@ -2,14 +2,14 @@ use super::{deserialize::Deserialize, deserializer::Deserializer};
 
 #[derive(Default)]
 pub struct Time {
-    second: u32,
-    minute: u32,
-    hour: u32,
-    month_day: u32,
-    month: u32,
-    year: u32,
-    week_day: u32,
-    year_day: u32,
+    pub second: u32,
+    pub minute: u32,
+    pub hour: u32,
+    pub month_day: u32,
+    pub month: u32,
+    pub year: u32,
+    pub week_day: u32,
+    pub year_day: u32,
 }
 
 impl Deserialize for Time {
