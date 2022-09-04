@@ -72,11 +72,10 @@ where
         } else {
             let chunk_version = chunk::Version::deserialize(deserializer)?;
             if 1u8 == chunk_version.major() {
-                // TODO
-                // revision_history.created_by = WStringWithLength::deserialize(deserializer)?;
+                revision_history.created_by = WStringWithLength::deserialize(deserializer)?.into();
                 revision_history.create_time = Time::deserialize(deserializer)?;
-                // TODO
-                // revision_history.last_edited_by = WStringWithLength::deserialize(deserializer)?;
+                revision_history.last_edited_by =
+                    WStringWithLength::deserialize(deserializer)?.into();
                 revision_history.last_edit_time = Time::deserialize(deserializer)?;
                 revision_history.revision_count = i32::deserialize(deserializer)?;
             }
@@ -104,8 +103,7 @@ where
             let chunk_version = chunk::Version::deserialize(deserializer)?;
             if 1u8 == chunk_version.major() {
                 notes.html_encoded = i32::deserialize(deserializer)? != 0i32;
-                // TODO
-                // notes.data = WStringWithLength::deserialize(deserializer)?.string;
+                notes.data = WStringWithLength::deserialize(deserializer)?.into();
                 notes.visible = i32::deserialize(deserializer)? != 0i32;
                 notes.window_left = i32::deserialize(deserializer)?;
                 notes.window_top = i32::deserialize(deserializer)?;
