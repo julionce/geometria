@@ -8,6 +8,7 @@ mod header;
 pub mod notes;
 mod on_version;
 mod reader;
+pub mod revision_history;
 mod start_section;
 mod string;
 mod time;
@@ -18,22 +19,14 @@ use chunk::Chunk;
 use deserialize::Deserialize;
 use deserializer::Deserializer;
 use on_version::Version as OnVersion;
-use string::StringWithLength;
-use time::Time;
 use version::Version;
 
 use std::io::{Seek, SeekFrom};
 
-use self::{application::Application, notes::Notes, string::WStringWithLength};
-
-#[derive(Default)]
-struct RevisionHistory {
-    created_by: String,
-    last_edited_by: String,
-    create_time: Time,
-    last_edit_time: Time,
-    revision_count: i32,
-}
+use self::{
+    application::Application, notes::Notes, revision_history::RevisionHistory,
+    string::WStringWithLength,
+};
 
 #[derive(Default)]
 struct Properties {
@@ -42,37 +35,6 @@ struct Properties {
     revision_history: RevisionHistory,
     notes: Notes,
     application: Application,
-}
-
-impl<D> Deserialize<'_, D> for RevisionHistory
-where
-    D: Deserializer,
-{
-    type Error = String;
-
-    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
-        let mut revision_history = RevisionHistory::default();
-        if Version::V1 == deserializer.version() {
-            revision_history.created_by = StringWithLength::deserialize(deserializer)?.into();
-            revision_history.create_time = Time::deserialize(deserializer)?;
-            i32::deserialize(deserializer)?;
-            revision_history.last_edited_by = StringWithLength::deserialize(deserializer)?.into();
-            revision_history.last_edit_time = Time::deserialize(deserializer)?;
-            i32::deserialize(deserializer)?;
-            revision_history.revision_count = i32::deserialize(deserializer)?;
-        } else {
-            let chunk_version = chunk::Version::deserialize(deserializer)?;
-            if 1u8 == chunk_version.major() {
-                revision_history.created_by = WStringWithLength::deserialize(deserializer)?.into();
-                revision_history.create_time = Time::deserialize(deserializer)?;
-                revision_history.last_edited_by =
-                    WStringWithLength::deserialize(deserializer)?.into();
-                revision_history.last_edit_time = Time::deserialize(deserializer)?;
-                revision_history.revision_count = i32::deserialize(deserializer)?;
-            }
-        }
-        Ok(revision_history)
-    }
 }
 
 impl<D> Deserialize<'_, D> for Properties
