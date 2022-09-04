@@ -1,6 +1,9 @@
-use std::io::Seek;
-
-use super::{chunk::Chunk, deserialize::Deserialize, deserializer::Deserializer, typecode};
+use super::{
+    chunk::Chunk,
+    deserialize::Deserialize,
+    deserializer::Deserializer,
+    typecode::{self},
+};
 
 pub struct Comment(String);
 
@@ -15,7 +18,7 @@ where
         if typecode::COMMENTBLOCK == chunk.chunk_begin().typecode {
             Ok(Comment(String::deserialize(&mut chunk)?))
         } else {
-            Err("Invalid typecode".to_string())
+            Err("invalid typecode".to_string())
         }
     }
 }

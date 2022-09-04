@@ -116,7 +116,7 @@ mod tests {
     use std::fs::File;
 
     #[test]
-    fn serialize_3dm() {
+    fn serialize_3dm_v1() {
         let mut deserializer = Reader {
             stream: File::open("tests/resources/serializer/rhino/v1/v1_three_points.3dm").unwrap(),
             version: Version::V1,
@@ -130,6 +130,44 @@ mod tests {
             Ok(version) => {
                 assert_eq!(Version::V1, version);
                 assert_eq!(Version::V1, deserializer.version())
+            }
+            Err(_) => assert!(false),
+        }
+        match Comment::deserialize(&mut deserializer) {
+            Ok(_) => {
+                assert!(true)
+            }
+            Err(_) => assert!(false),
+        }
+        match StartSection::deserialize(&mut deserializer) {
+            Ok(_) => {
+                assert!(true)
+            }
+            Err(_) => assert!(false),
+        }
+        match Properties::deserialize(&mut deserializer) {
+            Ok(_) => {
+                assert!(true)
+            }
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn serialize_3dm_v2() {
+        let mut deserializer = Reader {
+            stream: File::open("tests/resources/serializer/rhino/v2/v2_my_brep.3dm").unwrap(),
+            version: Version::V1,
+            chunk_begin: chunk::Begin::default(),
+        };
+        match Header::deserialize(&mut deserializer) {
+            Ok(_) => assert!(true),
+            Err(_) => assert!(false),
+        }
+        match Version::deserialize(&mut deserializer) {
+            Ok(version) => {
+                assert_eq!(Version::V2, version);
+                assert_eq!(Version::V2, deserializer.version())
             }
             Err(_) => assert!(false),
         }
