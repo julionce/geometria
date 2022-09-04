@@ -50,6 +50,34 @@ impl From<StringWithLength> for String {
     }
 }
 
+pub struct WStringWithLength(pub String);
+
+impl<D> Deserialize<'_, D> for WStringWithLength
+where
+    D: Deserializer,
+{
+    type Error = String;
+
+    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
+        let length = u32::deserialize(deserializer)? - 1;
+        let mut buf: Vec<u16> = vec![];
+        for _ in 0..length {
+            buf.push(u16::deserialize(deserializer)?);
+        }
+        u16::deserialize(deserializer)?;
+        match String::from_utf16(&buf) {
+            Ok(string) => Ok(Self(string)),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+}
+
+impl From<WStringWithLength> for String {
+    fn from(value: WStringWithLength) -> Self {
+        value.0
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;
@@ -57,6 +85,7 @@ mod tests {
     use crate::serializer::rhino::chunk::Begin;
     use crate::serializer::rhino::deserialize::Deserialize;
     use crate::serializer::rhino::reader::Reader;
+    use crate::serializer::rhino::string::WStringWithLength;
     use crate::serializer::rhino::version::Version as FileVersion;
 
     use super::StringWithLength;
@@ -92,7 +121,42 @@ mod tests {
             version: FileVersion::V1,
             chunk_begin: Begin::default(),
         };
-
         assert!(StringWithLength::deserialize(&mut deserializer).is_err());
+    }
+
+    #[test]
+    fn deserialize_wstring_with_length_ok() {
+        let mut string = "The string\0".to_string();
+        let size: u32 = string.encode_utf16().count() as u32;
+        let mut data: Vec<u8> = vec![];
+        data.extend(size.to_le_bytes().iter().clone());
+        string
+            .encode_utf16()
+            .for_each(|r| data.extend(r.to_le_bytes().iter()));
+        let mut deserializer = Reader {
+            stream: &mut Cursor::new(data),
+            version: FileVersion::V1,
+            chunk_begin: Begin::default(),
+        };
+        let wstring_with_length = WStringWithLength::deserialize(&mut deserializer).unwrap();
+        string.pop();
+        assert_eq!(string, String::from(wstring_with_length));
+    }
+
+    #[test]
+    fn deserialize_wstring_with_invalid_lenth() {
+        let string = "The string\0".to_string();
+        let size: u32 = (string.encode_utf16().count() + 1) as u32;
+        let mut data: Vec<u8> = vec![];
+        data.extend(size.to_le_bytes().iter().clone());
+        string
+            .encode_utf16()
+            .for_each(|r| data.extend(r.to_le_bytes().iter()));
+        let mut deserializer = Reader {
+            stream: &mut Cursor::new(data),
+            version: FileVersion::V1,
+            chunk_begin: Begin::default(),
+        };
+        assert!(WStringWithLength::deserialize(&mut deserializer).is_err());
     }
 }
