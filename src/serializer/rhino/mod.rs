@@ -1,3 +1,4 @@
+pub mod application;
 pub mod chunk;
 mod comment;
 mod date;
@@ -21,6 +22,8 @@ use time::Time;
 use version::Version;
 
 use std::io::{Seek, SeekFrom};
+
+use self::{application::Application, string::WStringWithLength};
 
 #[derive(Default)]
 struct RevisionHistory {
@@ -47,6 +50,7 @@ struct Properties {
     version: OnVersion,
     revision_history: RevisionHistory,
     notes: Notes,
+    application: Application,
 }
 
 impl<D> Deserialize<'_, D> for RevisionHistory
