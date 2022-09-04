@@ -196,16 +196,12 @@ where
         }
     }
 
-    pub fn start_position(&self) -> u64 {
+    fn start_position(&self) -> u64 {
         self.offset
     }
 
-    pub fn end_position(&self) -> u64 {
+    fn end_position(&self) -> u64 {
         self.offset + (self.length - 1)
-    }
-
-    pub fn length(&self) -> u64 {
-        self.length
     }
 
     fn remainder_length(&mut self) -> std::io::Result<u64> {
@@ -215,6 +211,12 @@ where
         } else {
             0
         })
+    }
+
+    fn is_long(version: FileVersion, begin: &Begin) -> bool {
+        (0 == begin.typecode & typecode::SHORT)
+            && (0 != begin.typecode || FileVersion::V1 != version)
+            && (0 < begin.value)
     }
 }
 
@@ -303,30 +305,16 @@ where
     type Error = String;
 
     fn deserialize(deserializer: &'a mut T) -> Result<Self, Self::Error> {
-        let typecode = Typecode::deserialize(deserializer)?;
-        let value: i64 = Value::deserialize(deserializer)?.into();
-        if 0 > value {
-            return Err("negative chunk length".to_string());
-        }
-        match deserializer.stream_position() {
-            Ok(offset) => {
-                match Self::new(
-                    deserializer,
-                    offset,
-                    value as u64,
-                    deserializer.version(),
-                    Begin {
-                        typecode: typecode,
-                        value: 0,
-                        initial_position: 0,
-                    },
-                ) {
-                    Ok(chunk) => Ok(chunk),
-                    Err(e) => Err(std::io::Error::from(e).to_string()),
-                }
-            }
-            Err(e) => Err(e.to_string()),
-        }
+        let offset = deserializer.stream_position().unwrap();
+        let begin = Begin::deserialize(deserializer)?;
+        let current_position = deserializer.stream_position().unwrap();
+        let length = current_position - offset
+            + if Self::is_long(deserializer.version(), &begin) {
+                begin.value as u64
+            } else {
+                0
+            };
+        Ok(Self::new(deserializer, offset, length, deserializer.version(), begin).unwrap())
     }
 }
 
@@ -575,14 +563,6 @@ mod tests {
         let mut stream = Cursor::new(data);
         let chunk = Chunk::new(&mut stream, 1, 2, FileVersion::V1, Begin::default()).unwrap();
         assert_eq!(2, chunk.end_position());
-    }
-
-    #[test]
-    fn chunk_length() {
-        let data = [0; 10];
-        let mut stream = Cursor::new(data);
-        let chunk = Chunk::new(&mut stream, 1, 2, FileVersion::V1, Begin::default()).unwrap();
-        assert_eq!(2, chunk.length());
     }
 
     #[test]
