@@ -47,6 +47,7 @@ struct Notes {
 
 #[derive(Default)]
 struct Properties {
+    filename: String,
     version: OnVersion,
     revision_history: RevisionHistory,
     notes: Notes,
@@ -138,19 +139,49 @@ where
                     typecode::NOTES => {
                         properties.notes = Notes::deserialize(&mut chunk)?;
                     }
-                    typecode::BITMAPPREVIEW => {
+                    typecode::BITMAPPREVIEW | typecode::CURRENTLAYER | typecode::LAYER => {
+                        // TODO
+                    }
+                    _ => {
                         break;
                     }
-                    typecode::CURRENTLAYER | typecode::LAYER => {
-                        break;
-                    }
-                    _ => {}
                 }
-                match chunk.seek(SeekFrom::End(1)) {
-                    Ok(_) => {}
-                    Err(e) => return Err(format!("{}", e)),
+                chunk.seek(SeekFrom::End(1)).unwrap();
+            }
+        } else {
+            let mut properties_chunk = Chunk::deserialize(deserializer)?;
+            if typecode::PROPERTIES_TABLE == properties_chunk.chunk_begin().typecode {
+                loop {
+                    let mut chunk = Chunk::deserialize(&mut properties_chunk)?;
+                    match chunk.chunk_begin().typecode {
+                        typecode::PROPERTIES_OPENNURBS_VERSION => {
+                            properties.version = OnVersion::deserialize(&mut chunk)?;
+                        }
+                        typecode::PROPERTIES_AS_FILE_NAME => {
+                            properties.filename =
+                                WStringWithLength::deserialize(&mut chunk)?.into();
+                        }
+                        typecode::PROPERTIES_REVISIONHISTORY => {
+                            properties.revision_history = RevisionHistory::deserialize(&mut chunk)?;
+                        }
+                        typecode::PROPERTIES_NOTES => {
+                            properties.notes = Notes::deserialize(&mut chunk)?;
+                        }
+                        typecode::PROPERTIES_APPLICATION => {
+                            properties.application = Application::deserialize(&mut chunk)?;
+                        }
+                        typecode::PROPERTIES_PREVIEWIMAGE
+                        | typecode::PROPERTIES_COMPRESSED_PREVIEWIMAGE => {
+                            // TODO
+                        }
+                        _ => {
+                            break;
+                        }
+                    }
+                    chunk.seek(SeekFrom::End(1)).unwrap();
                 }
             }
+            properties_chunk.seek(SeekFrom::End(1)).unwrap();
         }
         Ok(properties)
     }
