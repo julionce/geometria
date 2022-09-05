@@ -322,10 +322,10 @@ where
 mod tests {
     use std::io::{Cursor, Read, Seek, SeekFrom};
 
-    use crate::serializer::rhino::chunk::ChunkError;
-    use crate::serializer::rhino::typecode::{self};
-    use crate::serializer::rhino::version::Version as FileVersion;
-    use crate::serializer::rhino::{deserialize::Deserialize, reader::Reader};
+    use crate::rhino::chunk::ChunkError;
+    use crate::rhino::typecode::{self};
+    use crate::rhino::version::Version as FileVersion;
+    use crate::rhino::{deserialize::Deserialize, reader::Reader};
 
     use super::{Begin, Chunk, Value, Version};
 

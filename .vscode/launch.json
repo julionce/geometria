@@ -7,21 +7,21 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug unit tests in library 'geometria'",
+      "name": "Debug unit tests in library 'geometria_serializer'",
       "cargo": {
         "args": [
           "test",
           "--no-run",
           "--lib",
-          "--package=geometria"
+          "--package=geometria_serializer"
         ],
         "filter": {
-          "name": "geometria",
+          "name": "geometria_serializer",
           "kind": "lib"
         }
       },
       "args": [],
-      "cwd": "${workspaceFolder}"
+      "cwd": "${workspaceFolder}/serializer"
     }
   ]
 }

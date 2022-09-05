@@ -33,7 +33,7 @@ impl From<Comment> for String {
 mod tests {
     use std::io::Cursor;
 
-    use crate::serializer::rhino::{
+    use crate::rhino::{
         chunk::Begin, deserialize::Deserialize, reader::Reader, typecode,
         version::Version as FileVersion,
     };

@@ -55,7 +55,7 @@ where
 mod tests {
     use std::io::{Cursor, Seek};
 
-    use crate::serializer::rhino::{
+    use crate::rhino::{
         chunk::Begin, deserialize::Deserialize, reader::Reader, typecode,
         version::Version as FileVersion,
     };

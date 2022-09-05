@@ -40,7 +40,7 @@ mod tests {
         mem,
     };
 
-    use crate::serializer::rhino::{chunk, reader::Reader, version::Version};
+    use crate::rhino::{chunk, reader::Reader, version::Version};
 
     use super::*;
 

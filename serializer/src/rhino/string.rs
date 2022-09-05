@@ -82,11 +82,11 @@ impl From<WStringWithLength> for String {
 mod tests {
     use std::io::Cursor;
 
-    use crate::serializer::rhino::chunk::Begin;
-    use crate::serializer::rhino::deserialize::Deserialize;
-    use crate::serializer::rhino::reader::Reader;
-    use crate::serializer::rhino::string::WStringWithLength;
-    use crate::serializer::rhino::version::Version as FileVersion;
+    use crate::rhino::chunk::Begin;
+    use crate::rhino::deserialize::Deserialize;
+    use crate::rhino::reader::Reader;
+    use crate::rhino::string::WStringWithLength;
+    use crate::rhino::version::Version as FileVersion;
 
     use super::StringWithLength;
 

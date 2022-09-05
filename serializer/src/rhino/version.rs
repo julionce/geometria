@@ -95,7 +95,7 @@ where
 mod tests {
     use std::io::Cursor;
 
-    use crate::serializer::rhino::{chunk, reader::Reader};
+    use crate::rhino::{chunk, reader::Reader};
 
     use super::*;
 

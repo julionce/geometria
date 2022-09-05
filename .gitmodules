@@ -1,4 +1,4 @@
 [submodule "tests/resources"]
-	path = tests/resources
+	path = serializer/tests/resources
 	url = https://github.com/julionce/geometria_tests_resources
 	branch = master
