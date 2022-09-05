@@ -5,3 +5,4 @@ edition = "2021"
 exclude = ["tests/resources/"]
 
 [dependencies]
+geometria_derive = { path = "../derive" }

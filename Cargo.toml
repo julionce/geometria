@@ -1,5 +1,6 @@
 [workspace]
 
 members = [
-  "serializer"
+  "serializer",
+  "derive"
 ]
