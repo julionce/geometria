@@ -1,6 +1,7 @@
 use super::{deserialize::Deserialize, deserializer::Deserializer};
+use geometria_derive::Deserialize;
 
-#[derive(Default)]
+#[derive(Default, Deserialize)]
 pub struct Time {
     pub second: u32,
     pub minute: u32,
@@ -10,26 +11,6 @@ pub struct Time {
     pub year: u32,
     pub week_day: u32,
     pub year_day: u32,
-}
-
-impl<D> Deserialize<'_, D> for Time
-where
-    D: Deserializer,
-{
-    type Error = String;
-
-    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
-        Ok(Self {
-            second: u32::deserialize(deserializer)?,
-            minute: u32::deserialize(deserializer)?,
-            hour: u32::deserialize(deserializer)?,
-            month_day: u32::deserialize(deserializer)?,
-            month: u32::deserialize(deserializer)?,
-            year: u32::deserialize(deserializer)?,
-            week_day: u32::deserialize(deserializer)?,
-            year_day: u32::deserialize(deserializer)?,
-        })
-    }
 }
 
 #[cfg(test)]
