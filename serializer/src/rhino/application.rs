@@ -1,11 +1,17 @@
+use geometria_derive::Deserialize;
+
 use super::{
     chunk, deserialize::Deserialize, deserializer::Deserializer, string::WStringWithLength,
 };
 
-#[derive(Default)]
+#[derive(Default, Deserialize)]
+#[chunk_version]
 pub struct Application {
+    #[underlying_type(WStringWithLength)]
     name: String,
+    #[underlying_type(WStringWithLength)]
     url: String,
+    #[underlying_type(WStringWithLength)]
     details: String,
 }
 
@@ -20,21 +26,5 @@ impl Application {
 
     pub fn details(&self) -> &str {
         &self.details
-    }
-}
-
-impl<D> Deserialize<'_, D> for Application
-where
-    D: Deserializer,
-{
-    type Error = String;
-
-    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
-        let _chunk_version = chunk::Version::deserialize(deserializer)?;
-        Ok(Application {
-            name: WStringWithLength::deserialize(deserializer)?.into(),
-            url: WStringWithLength::deserialize(deserializer)?.into(),
-            details: WStringWithLength::deserialize(deserializer)?.into(),
-        })
     }
 }
