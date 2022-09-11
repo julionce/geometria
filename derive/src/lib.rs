@@ -80,12 +80,14 @@ impl StructAttrs {
 
 struct FieldAttrs {
     underlying_type: Option<syn::Type>,
+    padding: Option<syn::Type>,
 }
 
 impl FieldAttrs {
     fn new(field: &syn::Field) -> Self {
         Self {
             underlying_type: Self::parse_underlying_type(&field.attrs),
+            padding: Self::parse_padding(&field.attrs),
         }
     }
 
@@ -95,9 +97,16 @@ impl FieldAttrs {
             None => None,
         }
     }
+
+    fn parse_padding(attrs: &Vec<syn::Attribute>) -> Option<syn::Type> {
+        match attrs.iter().find(|a| a.path.is_ident("padding")) {
+            Some(attr) => Some(attr.parse_args::<syn::Type>().unwrap()),
+            None => None,
+        }
+    }
 }
 
-#[proc_macro_derive(Deserialize, attributes(chunk_version, underlying_type))]
+#[proc_macro_derive(Deserialize, attributes(chunk_version, underlying_type, padding))]
 pub fn deserialize_derive(input: TokenStream) -> TokenStream {
     let DeriveInput {
         ident, data, attrs, ..
@@ -117,9 +126,19 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
                         } else {
                             quote!(#field_ty::deserialize(deserializer)?)
                         };
-                        quote!(
-                            #field_ident: #field_deserialize
-                        )
+                        if field_attrs.padding.is_some() {
+                            let padding = &field_attrs.padding.as_ref().unwrap();
+                            quote!(
+                                #field_ident: {
+                                    #padding::deserialize(deserializer)?;
+                                    #field_deserialize
+                                }
+                            )
+                        } else {
+                            quote!(
+                                #field_ident: #field_deserialize
+                            )
+                        }
                     });
                     let fields_deserialize = quote!(#(#fields_iter),*);
                     let deserialize_body = match struct_attrs.major_chunk_version {
