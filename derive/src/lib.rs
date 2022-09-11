@@ -22,14 +22,20 @@ impl MajorChunkVersion {
     }
 }
 
+struct TableAttr {
+    typecode: Option<syn::Type>,
+}
+
 struct StructAttrs {
     major_chunk_version: Option<MajorChunkVersion>,
+    table: Option<TableAttr>,
 }
 
 impl StructAttrs {
     fn new(attrs: &Vec<syn::Attribute>) -> Self {
         Self {
             major_chunk_version: Self::parse_major_chunk_version(attrs),
+            table: Self::parse_table(attrs),
         }
     }
 
@@ -76,11 +82,27 @@ impl StructAttrs {
             None => None,
         }
     }
+
+    fn parse_table(attrs: &Vec<syn::Attribute>) -> Option<TableAttr> {
+        match attrs.iter().find(|a| a.path.is_ident("table")) {
+            Some(attr) => {
+                if attr.tokens.is_empty() {
+                    Some(TableAttr { typecode: None })
+                } else {
+                    Some(TableAttr {
+                        typecode: Some(attr.parse_args::<syn::Type>().unwrap()),
+                    })
+                }
+            }
+            None => None,
+        }
+    }
 }
 
 struct FieldAttrs {
     underlying_type: Option<syn::Type>,
     padding: Option<syn::Type>,
+    typecode: Option<syn::Type>,
 }
 
 impl FieldAttrs {
@@ -88,6 +110,7 @@ impl FieldAttrs {
         Self {
             underlying_type: Self::parse_underlying_type(&field.attrs),
             padding: Self::parse_padding(&field.attrs),
+            typecode: Self::parse_typecode(&field.attrs),
         }
     }
 
@@ -104,9 +127,19 @@ impl FieldAttrs {
             None => None,
         }
     }
+
+    fn parse_typecode(attrs: &Vec<syn::Attribute>) -> Option<syn::Type> {
+        match attrs.iter().find(|a| a.path.is_ident("table_field")) {
+            Some(attr) => Some(attr.parse_args::<syn::Type>().unwrap()),
+            None => None,
+        }
+    }
 }
 
-#[proc_macro_derive(Deserialize, attributes(chunk_version, underlying_type, padding))]
+#[proc_macro_derive(
+    Deserialize,
+    attributes(chunk_version, underlying_type, padding, table, table_field)
+)]
 pub fn deserialize_derive(input: TokenStream) -> TokenStream {
     let DeriveInput {
         ident, data, attrs, ..
@@ -126,27 +159,79 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
                         } else {
                             quote!(#field_ty::deserialize(deserializer)?)
                         };
-                        if field_attrs.padding.is_some() {
+                        let padding_deserialize = if field_attrs.padding.is_some() {
                             let padding = &field_attrs.padding.as_ref().unwrap();
+                            quote!(#padding::deserialize(deserializer)?;)
+                        } else {
+                            quote!()
+                        };
+                        if field_attrs.typecode.is_some() {
+                            let typecode = &field_attrs.typecode.as_ref().unwrap();
                             quote!(
-                                #field_ident: {
-                                    #padding::deserialize(deserializer)?;
-                                    #field_deserialize
+                                typecode::#typecode => {
+                                    #padding_deserialize
+                                    table.#field_ident = #field_deserialize;
                                 }
                             )
                         } else {
                             quote!(
-                                #field_ident: #field_deserialize
+                                #field_ident: {
+                                    #padding_deserialize
+                                    #field_deserialize
+                                }
                             )
                         }
                     });
-                    let fields_deserialize = quote!(#(#fields_iter),*);
+
+                    let struct_deserialize = if struct_attrs.table.is_some() {
+                        if struct_attrs.table.as_ref().unwrap().typecode.is_some() {
+                            let typecode = struct_attrs.table.unwrap().typecode.unwrap();
+                            quote!(
+                                let mut table = Self::default();
+                                let mut properties_chunk = Chunk::deserialize(deserializer)?;
+                                if typecode::#typecode == properties_chunk.chunk_begin().typecode {
+                                    loop {
+                                        let mut chunk = Chunk::deserialize(&mut properties_chunk)?;
+                                        let deserializer = &mut chunk;
+                                        match deserializer.chunk_begin().typecode {
+                                            #(#fields_iter)*
+                                            _ => {
+                                                break;
+                                            }
+                                        }
+                                        chunk.seek(SeekFrom::End(1)).unwrap();
+                                    }
+                                }
+                                properties_chunk.seek(SeekFrom::End(1)).unwrap();
+                                Ok(table)
+                            )
+                        } else {
+                            quote!(
+                                let mut table = Self::default();
+                                loop {
+                                    let mut chunk = Chunk::deserialize(deserializer)?;
+                                    let deserializer = &mut chunk;
+                                    match deserializer.chunk_begin().typecode {
+                                        #(#fields_iter)*
+                                        _ => {
+                                            break;
+                                        }
+                                    }
+                                    chunk.seek(SeekFrom::End(1)).unwrap();
+                                }
+                                Ok(table)
+                            )
+                        }
+                    } else {
+                        quote!(Ok(Self {#(#fields_iter),*}))
+                    };
+
                     let deserialize_body = match struct_attrs.major_chunk_version {
                         Some(major_version) => match major_version {
                             MajorChunkVersion::Any => {
                                 quote!(
                                     let _chunk_version = chunk::Version::deserialize(deserializer)?;
-                                    Ok(Self {#fields_deserialize})
+                                    #struct_deserialize
                                 )
                             }
                             MajorChunkVersion::Eq(value)
@@ -157,7 +242,7 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
                                 quote!(
                                     let chunk_version = chunk::Version::deserialize(deserializer)?;
                                     if chunk_version.major() #quote_operator #value {
-                                        Ok(Self {#fields_deserialize})
+                                        #struct_deserialize
                                     } else {
                                         Ok(Self::default())
                                     }
@@ -165,7 +250,7 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
                             }
                         },
                         None => quote!(
-                            Ok(Self {#fields_deserialize})
+                            #struct_deserialize
                         ),
                     };
                     quote! {
