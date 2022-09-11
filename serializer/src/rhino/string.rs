@@ -50,6 +50,7 @@ impl From<StringWithLength> for String {
     }
 }
 
+#[derive(Default)]
 pub struct WStringWithLength(pub String);
 
 impl<D> Deserialize<'_, D> for WStringWithLength
