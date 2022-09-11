@@ -1,3 +1,5 @@
+use geometria_derive::Deserialize;
+
 use super::{
     chunk,
     deserialize::Deserialize,
@@ -7,13 +9,40 @@ use super::{
     version::Version,
 };
 
-#[derive(Default)]
-pub struct RevisionHistory {
-    created_by: String,
-    last_edited_by: String,
-    create_time: Time,
-    last_edit_time: Time,
-    revision_count: i32,
+#[derive(Default, Deserialize)]
+pub struct RevisionHistoryV1 {
+    #[underlying_type(StringWithLength)]
+    pub created_by: String,
+    pub create_time: Time,
+    #[padding(i32)]
+    #[underlying_type(StringWithLength)]
+    pub last_edited_by: String,
+    pub last_edit_time: Time,
+    #[padding(i32)]
+    pub revision_count: i32,
+}
+
+#[derive(Default, Deserialize)]
+#[chunk_version(major == 1)]
+pub struct RevisionHistoryV2 {
+    #[underlying_type(WStringWithLength)]
+    pub created_by: String,
+    #[underlying_type(WStringWithLength)]
+    pub last_edited_by: String,
+    pub create_time: Time,
+    pub last_edit_time: Time,
+    pub revision_count: i32,
+}
+
+pub enum RevisionHistory {
+    V1(RevisionHistoryV1),
+    V2(RevisionHistoryV2),
+}
+
+impl Default for RevisionHistory {
+    fn default() -> Self {
+        Self::V1(RevisionHistoryV1::default())
+    }
 }
 
 impl<D> Deserialize<'_, D> for RevisionHistory
@@ -23,25 +52,11 @@ where
     type Error = String;
 
     fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
-        let mut revision_history = RevisionHistory::default();
+        let revision_history;
         if Version::V1 == deserializer.version() {
-            revision_history.created_by = StringWithLength::deserialize(deserializer)?.into();
-            revision_history.create_time = Time::deserialize(deserializer)?;
-            i32::deserialize(deserializer)?;
-            revision_history.last_edited_by = StringWithLength::deserialize(deserializer)?.into();
-            revision_history.last_edit_time = Time::deserialize(deserializer)?;
-            i32::deserialize(deserializer)?;
-            revision_history.revision_count = i32::deserialize(deserializer)?;
+            revision_history = RevisionHistory::V1(RevisionHistoryV1::deserialize(deserializer)?);
         } else {
-            let chunk_version = chunk::Version::deserialize(deserializer)?;
-            if 1u8 == chunk_version.major() {
-                revision_history.created_by = WStringWithLength::deserialize(deserializer)?.into();
-                revision_history.create_time = Time::deserialize(deserializer)?;
-                revision_history.last_edited_by =
-                    WStringWithLength::deserialize(deserializer)?.into();
-                revision_history.last_edit_time = Time::deserialize(deserializer)?;
-                revision_history.revision_count = i32::deserialize(deserializer)?;
-            }
+            revision_history = RevisionHistory::V2(RevisionHistoryV2::deserialize(deserializer)?);
         }
         Ok(revision_history)
     }
