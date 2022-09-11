@@ -1,4 +1,7 @@
+use geometria_derive::Deserialize;
+
 use super::{
+    bool::BoolFromI32,
     chunk,
     deserialize::Deserialize,
     deserializer::Deserializer,
@@ -6,15 +9,41 @@ use super::{
     version::Version,
 };
 
-#[derive(Default)]
-pub struct Notes {
-    data: String,
-    visible: bool,
-    html_encoded: bool,
-    window_left: i32,
-    window_top: i32,
-    window_right: i32,
-    window_bottom: i32,
+#[derive(Default, Deserialize)]
+pub struct NotesV1 {
+    pub visible: i32,
+    pub window_left: i32,
+    pub window_top: i32,
+    pub window_right: i32,
+    pub window_bottom: i32,
+    #[underlying_type(StringWithLength)]
+    pub data: String,
+}
+
+#[derive(Default, Deserialize)]
+#[chunk_version(major == 1)]
+pub struct NotesV2 {
+    #[underlying_type(BoolFromI32)]
+    pub html_encoded: bool,
+    #[underlying_type(WStringWithLength)]
+    pub data: String,
+    #[underlying_type(BoolFromI32)]
+    pub visible: bool,
+    pub window_left: i32,
+    pub window_top: i32,
+    pub window_right: i32,
+    pub window_bottom: i32,
+}
+
+pub enum Notes {
+    V1(NotesV1),
+    V2(NotesV2),
+}
+
+impl Default for Notes {
+    fn default() -> Self {
+        Self::V1(NotesV1::default())
+    }
 }
 
 impl<D> Deserialize<'_, D> for Notes
@@ -24,25 +53,11 @@ where
     type Error = String;
 
     fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
-        let mut notes = Notes::default();
+        let notes;
         if Version::V1 == deserializer.version() {
-            notes.visible = i32::deserialize(deserializer)? != 0i32;
-            notes.window_left = i32::deserialize(deserializer)?;
-            notes.window_top = i32::deserialize(deserializer)?;
-            notes.window_right = i32::deserialize(deserializer)?;
-            notes.window_bottom = i32::deserialize(deserializer)?;
-            notes.data = StringWithLength::deserialize(deserializer)?.into();
+            notes = Notes::V1(NotesV1::deserialize(deserializer)?);
         } else {
-            let chunk_version = chunk::Version::deserialize(deserializer)?;
-            if 1u8 == chunk_version.major() {
-                notes.html_encoded = i32::deserialize(deserializer)? != 0i32;
-                notes.data = WStringWithLength::deserialize(deserializer)?.into();
-                notes.visible = i32::deserialize(deserializer)? != 0i32;
-                notes.window_left = i32::deserialize(deserializer)?;
-                notes.window_top = i32::deserialize(deserializer)?;
-                notes.window_right = i32::deserialize(deserializer)?;
-                notes.window_bottom = i32::deserialize(deserializer)?;
-            }
+            notes = Notes::V2(NotesV2::deserialize(deserializer)?);
         }
         Ok(notes)
     }
