@@ -1,5 +1,6 @@
 pub mod application;
 pub mod archive;
+mod array;
 mod bool;
 pub mod chunk;
 mod comment;
