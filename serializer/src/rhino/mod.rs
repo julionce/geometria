@@ -1,4 +1,5 @@
 pub mod application;
+pub mod archive;
 mod bool;
 pub mod chunk;
 mod comment;
@@ -19,10 +20,7 @@ mod version;
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        comment::Comment, deserialize::Deserialize, deserializer::Deserializer, header::Header,
-        properties::Properties, start_section::StartSection, version::Version, *,
-    };
+    use super::{archive::Archive, deserialize::Deserialize, version::Version, *};
     use reader::Reader;
     use std::fs::File;
 
@@ -33,33 +31,8 @@ mod tests {
             version: Version::V1,
             chunk_begin: chunk::Begin::default(),
         };
-        match Header::deserialize(&mut deserializer) {
+        match Archive::deserialize(&mut deserializer) {
             Ok(_) => assert!(true),
-            Err(_) => assert!(false),
-        }
-        match Version::deserialize(&mut deserializer) {
-            Ok(version) => {
-                assert_eq!(Version::V1, version);
-                assert_eq!(Version::V1, deserializer.version())
-            }
-            Err(_) => assert!(false),
-        }
-        match Comment::deserialize(&mut deserializer) {
-            Ok(_) => {
-                assert!(true)
-            }
-            Err(_) => assert!(false),
-        }
-        match StartSection::deserialize(&mut deserializer) {
-            Ok(_) => {
-                assert!(true)
-            }
-            Err(_) => assert!(false),
-        }
-        match Properties::deserialize(&mut deserializer) {
-            Ok(_) => {
-                assert!(true)
-            }
             Err(_) => assert!(false),
         }
     }
@@ -71,33 +44,8 @@ mod tests {
             version: Version::V1,
             chunk_begin: chunk::Begin::default(),
         };
-        match Header::deserialize(&mut deserializer) {
+        match Archive::deserialize(&mut deserializer) {
             Ok(_) => assert!(true),
-            Err(_) => assert!(false),
-        }
-        match Version::deserialize(&mut deserializer) {
-            Ok(version) => {
-                assert_eq!(Version::V2, version);
-                assert_eq!(Version::V2, deserializer.version())
-            }
-            Err(_) => assert!(false),
-        }
-        match Comment::deserialize(&mut deserializer) {
-            Ok(_) => {
-                assert!(true)
-            }
-            Err(_) => assert!(false),
-        }
-        match StartSection::deserialize(&mut deserializer) {
-            Ok(_) => {
-                assert!(true)
-            }
-            Err(_) => assert!(false),
-        }
-        match Properties::deserialize(&mut deserializer) {
-            Ok(_) => {
-                assert!(true)
-            }
             Err(_) => assert!(false),
         }
     }
