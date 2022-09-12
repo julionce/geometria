@@ -63,7 +63,7 @@ impl<D> Deserialize<'_, D> for Version
 where
     D: Deserializer,
 {
-    type Error = VersionError;
+    type Error = String;
 
     fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
         let mut buffer = [0; 8];
@@ -74,19 +74,19 @@ where
                     .skip_while(|x| **x == ' ' as u8)
                     .try_fold(0u8, |acc, x| match (*x as char).to_digit(10) {
                         Some(d) => Ok(acc * 10u8 + (d as u8)),
-                        None => Err(VersionError::InvalidVersion),
+                        None => Err("invalid version".to_string()),
                     }) {
                     Ok(v) => match Version::try_from(v) {
                         Ok(version) => {
                             deserializer.set_version(version);
                             Ok(version)
                         }
-                        Err(e) => Err(e),
+                        Err(e) => Err(e.to_string()),
                     },
-                    Err(e) => Err(e),
+                    Err(e) => Err(e.to_string()),
                 }
             }
-            Err(e) => Err(VersionError::IoError(e.kind())),
+            Err(e) => Err(e.to_string()),
         }
     }
 }
@@ -152,11 +152,7 @@ mod tests {
             version: Version::V1,
             chunk_begin: chunk::Begin::default(),
         };
-
-        assert_eq!(
-            Version::deserialize(&mut deserializer).err(),
-            Some(VersionError::InvalidVersion)
-        );
+        assert!(Version::deserialize(&mut deserializer).is_err());
     }
 
     #[test]
@@ -167,10 +163,6 @@ mod tests {
             version: Version::V1,
             chunk_begin: chunk::Begin::default(),
         };
-
-        assert_eq!(
-            Version::deserialize(&mut deserializer).err(),
-            Some(VersionError::IoError(std::io::ErrorKind::UnexpectedEof))
-        );
+        assert!(Version::deserialize(&mut deserializer).is_err());
     }
 }
