@@ -101,11 +101,11 @@ where
     }
 }
 
-pub struct Version {
+pub struct BigVersion {
     inner: u8,
 }
 
-impl Version {
+impl BigVersion {
     pub fn minor(&self) -> u8 {
         self.inner & 0x0F
     }
@@ -115,7 +115,7 @@ impl Version {
     }
 }
 
-impl<D> Deserialize<'_, D> for Version
+impl<D> Deserialize<'_, D> for BigVersion
 where
     D: Deserializer,
 {
@@ -327,7 +327,7 @@ mod tests {
     use crate::rhino::version::Version as FileVersion;
     use crate::rhino::{deserialize::Deserialize, reader::Reader};
 
-    use super::{Begin, Chunk, Value, Version};
+    use super::*;
 
     #[test]
     fn deserialize_version() {
@@ -341,7 +341,7 @@ mod tests {
             chunk_begin: Begin::default(),
         };
 
-        let version = Version::deserialize(&mut deserializer).unwrap();
+        let version = BigVersion::deserialize(&mut deserializer).unwrap();
         assert_eq!(major_version, version.major());
         assert_eq!(minor_version, version.minor());
     }

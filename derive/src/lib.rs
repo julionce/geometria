@@ -230,7 +230,7 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
                         Some(major_version) => match major_version {
                             MajorChunkVersion::Any => {
                                 quote!(
-                                    let _chunk_version = chunk::Version::deserialize(deserializer)?;
+                                    let _chunk_version = chunk::BigVersion::deserialize(deserializer)?;
                                     #struct_deserialize
                                 )
                             }
@@ -240,7 +240,7 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
                             | MajorChunkVersion::Ne(value) => {
                                 let quote_operator = major_version.quote_operator();
                                 quote!(
-                                    let chunk_version = chunk::Version::deserialize(deserializer)?;
+                                    let chunk_version = chunk::BigVersion::deserialize(deserializer)?;
                                     if chunk_version.major() #quote_operator #value {
                                         #struct_deserialize
                                     } else {
