@@ -3,8 +3,9 @@ use std::io::{Seek, SeekFrom};
 
 use super::{
     application::Application, chunk::Chunk, deserialize::Deserialize, deserializer::Deserializer,
-    notes::Notes, on_version::Version as OnVersion, revision_history::RevisionHistory,
-    string::WStringWithLength, typecode, version::Version,
+    notes::Notes, on_version::Version as OnVersion, preview_image::CompressedPreviewImage,
+    preview_image::PreviewImage, revision_history::RevisionHistory, string::WStringWithLength,
+    typecode, version::Version,
 };
 
 #[derive(Default, Deserialize)]
@@ -16,6 +17,8 @@ pub struct PropertiesV1 {
     revision_history: RevisionHistory,
     #[table_field(NOTES)]
     notes: Notes,
+    #[table_field(BITMAPPREVIEW)]
+    preview_image: PreviewImage,
 }
 
 #[derive(Default, Deserialize)]
@@ -32,6 +35,10 @@ pub struct PropertiesV2 {
     notes: Notes,
     #[table_field(PROPERTIES_APPLICATION)]
     application: Application,
+    #[table_field(PROPERTIES_PREVIEWIMAGE)]
+    preview_image: PreviewImage,
+    #[table_field(PROPERTIES_COMPRESSED_PREVIEWIMAGE)]
+    compressed_preview_image: CompressedPreviewImage,
 }
 
 pub enum Properties {

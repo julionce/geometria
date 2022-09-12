@@ -9,6 +9,7 @@ mod deserializer;
 mod header;
 pub mod notes;
 mod on_version;
+mod preview_image;
 mod properties;
 mod reader;
 pub mod revision_history;
