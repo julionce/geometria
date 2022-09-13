@@ -5,7 +5,7 @@ use super::{
 };
 
 #[derive(Default, Deserialize)]
-#[chunk_version]
+#[big_chunk_version]
 pub struct Application {
     #[underlying_type(WStringWithLength)]
     name: String,

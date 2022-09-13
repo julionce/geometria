@@ -2,7 +2,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{self, parse_macro_input, Data, DeriveInput, Fields};
 
-enum MajorChunkVersion {
+enum BigChunkVersion {
     Gt(u8),
     Lt(u8),
     Eq(u8),
@@ -10,7 +10,7 @@ enum MajorChunkVersion {
     Any,
 }
 
-impl MajorChunkVersion {
+impl BigChunkVersion {
     fn quote_operator(&self) -> proc_macro2::TokenStream {
         match self {
             Self::Gt(_) => quote!(>).into(),
@@ -27,23 +27,23 @@ struct TableAttr {
 }
 
 struct StructAttrs {
-    major_chunk_version: Option<MajorChunkVersion>,
+    big_chunk_major_version: Option<BigChunkVersion>,
     table: Option<TableAttr>,
 }
 
 impl StructAttrs {
     fn new(attrs: &Vec<syn::Attribute>) -> Self {
         Self {
-            major_chunk_version: Self::parse_major_chunk_version(attrs),
+            big_chunk_major_version: Self::parse_big_chunk_major_version(attrs),
             table: Self::parse_table(attrs),
         }
     }
 
-    fn parse_major_chunk_version(attrs: &Vec<syn::Attribute>) -> Option<MajorChunkVersion> {
-        match attrs.iter().find(|a| a.path.is_ident("chunk_version")) {
+    fn parse_big_chunk_major_version(attrs: &Vec<syn::Attribute>) -> Option<BigChunkVersion> {
+        match attrs.iter().find(|a| a.path.is_ident("big_chunk_version")) {
             Some(attr) => {
                 if attr.tokens.is_empty() {
-                    Some(MajorChunkVersion::Any)
+                    Some(BigChunkVersion::Any)
                 } else {
                     match attr.parse_args::<syn::ExprBinary>() {
                         Ok(expr) => match *expr.left {
@@ -54,16 +54,16 @@ impl StructAttrs {
                                 match *expr.right {
                                     syn::Expr::Lit(lit) => match lit.lit {
                                         syn::Lit::Int(int) => match expr.op {
-                                            syn::BinOp::Gt(_) => Some(MajorChunkVersion::Gt(
+                                            syn::BinOp::Gt(_) => Some(BigChunkVersion::Gt(
                                                 int.base10_parse::<u8>().unwrap(),
                                             )),
-                                            syn::BinOp::Lt(_) => Some(MajorChunkVersion::Lt(
+                                            syn::BinOp::Lt(_) => Some(BigChunkVersion::Lt(
                                                 int.base10_parse::<u8>().unwrap(),
                                             )),
-                                            syn::BinOp::Eq(_) => Some(MajorChunkVersion::Eq(
+                                            syn::BinOp::Eq(_) => Some(BigChunkVersion::Eq(
                                                 int.base10_parse::<u8>().unwrap(),
                                             )),
-                                            syn::BinOp::Ne(_) => Some(MajorChunkVersion::Ne(
+                                            syn::BinOp::Ne(_) => Some(BigChunkVersion::Ne(
                                                 int.base10_parse::<u8>().unwrap(),
                                             )),
                                             _ => panic!(),
@@ -138,7 +138,7 @@ impl FieldAttrs {
 
 #[proc_macro_derive(
     Deserialize,
-    attributes(chunk_version, underlying_type, padding, table, table_field)
+    attributes(big_chunk_version, underlying_type, padding, table, table_field)
 )]
 pub fn deserialize_derive(input: TokenStream) -> TokenStream {
     let DeriveInput {
@@ -234,18 +234,18 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
                         quote!(Ok(Self {#(#fields_iter),*}))
                     };
 
-                    let deserialize_body = match struct_attrs.major_chunk_version {
+                    let deserialize_body = match struct_attrs.big_chunk_major_version {
                         Some(major_version) => match major_version {
-                            MajorChunkVersion::Any => {
+                            BigChunkVersion::Any => {
                                 quote!(
                                     let _chunk_version = chunk::BigVersion::deserialize(deserializer)?;
                                     #struct_deserialize
                                 )
                             }
-                            MajorChunkVersion::Eq(value)
-                            | MajorChunkVersion::Gt(value)
-                            | MajorChunkVersion::Lt(value)
-                            | MajorChunkVersion::Ne(value) => {
+                            BigChunkVersion::Eq(value)
+                            | BigChunkVersion::Gt(value)
+                            | BigChunkVersion::Lt(value)
+                            | BigChunkVersion::Ne(value) => {
                                 let quote_operator = major_version.quote_operator();
                                 quote!(
                                     let chunk_version = chunk::BigVersion::deserialize(deserializer)?;

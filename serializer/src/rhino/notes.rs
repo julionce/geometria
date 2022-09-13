@@ -21,7 +21,7 @@ pub struct NotesV1 {
 }
 
 #[derive(Default, Deserialize)]
-#[chunk_version(major == 1)]
+#[big_chunk_version(major == 1)]
 pub struct NotesV2 {
     #[underlying_type(BoolFromI32)]
     pub html_encoded: bool,

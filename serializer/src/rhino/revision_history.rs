@@ -23,7 +23,7 @@ pub struct RevisionHistoryV1 {
 }
 
 #[derive(Default, Deserialize)]
-#[chunk_version(major == 1)]
+#[big_chunk_version(major == 1)]
 pub struct RevisionHistoryV2 {
     #[underlying_type(WStringWithLength)]
     pub created_by: String,
