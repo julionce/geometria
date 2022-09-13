@@ -1,16 +1,16 @@
 use super::{deserialize::Deserialize, deserializer::Deserializer};
 
-pub struct Array<T> {
+pub struct Sequence<T> {
     pub data: Vec<T>,
 }
 
-impl<T> From<Array<T>> for Vec<T> {
-    fn from(array: Array<T>) -> Self {
+impl<T> From<Sequence<T>> for Vec<T> {
+    fn from(array: Sequence<T>) -> Self {
         array.data
     }
 }
 
-impl<D, T> Deserialize<'_, D> for Array<T>
+impl<D, T> Deserialize<'_, D> for Sequence<T>
 where
     D: Deserializer,
     T: for<'a> Deserialize<'a, D>,
@@ -50,7 +50,7 @@ mod tests {
             version: Version::V1,
             chunk_begin: chunk::Begin::default(),
         };
-        assert!(Array::<u8>::deserialize(&mut deserializer).is_err());
+        assert!(Sequence::<u8>::deserialize(&mut deserializer).is_err());
     }
 
     #[test]
@@ -64,11 +64,11 @@ mod tests {
             version: Version::V1,
             chunk_begin: chunk::Begin::default(),
         };
-        assert!(Array::<u8>::deserialize(&mut deserializer).is_err());
+        assert!(Sequence::<u8>::deserialize(&mut deserializer).is_err());
     }
 
     #[test]
-    fn ok() {
+    fn ok_length() {
         let mut data: Vec<u8> = vec![];
         data.extend((2i32).to_le_bytes());
         data.push(0);
@@ -80,7 +80,7 @@ mod tests {
             chunk_begin: chunk::Begin::default(),
         };
         assert_eq!(
-            Vec::<u8>::from(Array::<u8>::deserialize(&mut deserializer).ok().unwrap()),
+            Vec::<u8>::from(Sequence::<u8>::deserialize(&mut deserializer).ok().unwrap()),
             vec![0, 1]
         );
     }

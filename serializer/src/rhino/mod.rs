@@ -1,6 +1,5 @@
 pub mod application;
 pub mod archive;
-mod array;
 mod bool;
 pub mod chunk;
 mod comment;
@@ -14,6 +13,7 @@ mod preview_image;
 mod properties;
 mod reader;
 pub mod revision_history;
+mod sequence;
 mod start_section;
 mod string;
 mod time;
