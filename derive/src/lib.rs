@@ -152,7 +152,15 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
                     let fields_iter = fields.named.iter().map(|named_field| {
                         let field_attrs = FieldAttrs::new(named_field);
                         let field_ident = named_field.ident.as_ref().unwrap();
-                        let field_ty = &named_field.ty;
+                        let field_ty = match &named_field.ty {
+                            syn::Type::Array(value) => {
+                                quote!(<#value>)
+                            },
+                            syn::Type::Path(value) => {
+                                quote!(#value)
+                            },
+                            _ => panic!()
+                        };
                         let field_deserialize = if field_attrs.underlying_type.is_some() {
                             let underlying_ty = &field_attrs.underlying_type.as_ref().unwrap();
                             quote!(#field_ty::from(#underlying_ty::deserialize(deserializer)?))

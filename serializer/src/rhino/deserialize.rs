@@ -50,3 +50,20 @@ impl_deserialize_num! {isize}
 
 impl_deserialize_num! {f32}
 impl_deserialize_num! {f64}
+
+impl<D, T, const N: usize> Deserialize<'_, D> for [T; N]
+where
+    D: Deserializer,
+    T: for<'a> Deserialize<'a, D> + Default + Copy,
+    String: for<'a> From<<T as Deserialize<'a, D>>::Error>,
+{
+    type Error = String;
+
+    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
+        let mut rv: Self = [T::default(); N];
+        for i in 0..N {
+            rv[i] = T::deserialize(deserializer)?;
+        }
+        Ok(rv)
+    }
+}
