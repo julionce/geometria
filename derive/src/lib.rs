@@ -103,6 +103,7 @@ struct FieldAttrs {
     underlying_type: Option<syn::Type>,
     padding: Option<syn::Type>,
     typecode: Option<syn::Type>,
+    big_chunk_minor_version: Option<BigChunkVersion>,
 }
 
 impl FieldAttrs {
@@ -111,6 +112,7 @@ impl FieldAttrs {
             underlying_type: Self::parse_underlying_type(&field.attrs),
             padding: Self::parse_padding(&field.attrs),
             typecode: Self::parse_typecode(&field.attrs),
+            big_chunk_minor_version: BigChunkVersion::parse("minor", &field.attrs),
         }
     }
 
@@ -175,19 +177,77 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
                         };
                         if field_attrs.typecode.is_some() {
                             let typecode = &field_attrs.typecode.as_ref().unwrap();
-                            quote!(
-                                typecode::#typecode => {
-                                    #padding_deserialize
-                                    table.#field_ident = #field_deserialize;
+                            match field_attrs.big_chunk_minor_version {
+                                Some(version) => match version {
+                                    BigChunkVersion::Any => {
+                                        quote!(
+                                            typecode::#typecode => {
+                                                #padding_deserialize
+                                                table.#field_ident = #field_deserialize;
+                                            }
+                                        )
+                                    }
+                                    BigChunkVersion::Eq(value)
+                                    | BigChunkVersion::Gt(value)
+                                    | BigChunkVersion::Lt(value)
+                                    | BigChunkVersion::Ne(value) => {
+                                        let quote_operator = version.quote_operator();
+                                        quote!(
+                                            typecode::#typecode => {
+                                                if chunk_version.minor() #quote_operator #value {
+                                                    #padding_deserialize
+                                                    table.#field_ident = #field_deserialize;
+                                                }
+                                            }
+                                        )
+                                    }
+                                },
+                                None => {
+                                    quote!(
+                                        typecode::#typecode => {
+                                            #padding_deserialize
+                                            table.#field_ident = #field_deserialize;
+                                        }
+                                    )
                                 }
-                            )
+                            }
                         } else {
-                            quote!(
-                                #field_ident: {
-                                    #padding_deserialize
-                                    #field_deserialize
+                            match field_attrs.big_chunk_minor_version {
+                                Some(version) => match version {
+                                    BigChunkVersion::Any => {
+                                        quote!(
+                                            #field_ident: {
+                                                #padding_deserialize
+                                                #field_deserialize
+                                            }
+                                        )
+                                    }
+                                    BigChunkVersion::Eq(value)
+                                    | BigChunkVersion::Gt(value)
+                                    | BigChunkVersion::Lt(value)
+                                    | BigChunkVersion::Ne(value) => {
+                                        let quote_operator = version.quote_operator();
+                                        quote!(
+                                            #field_ident: {
+                                                if chunk_version.minor() #quote_operator #value {
+                                                    #padding_deserialize
+                                                    #field_deserialize
+                                                } else {
+                                                    #field_ty::default()
+                                                }
+                                            }
+                                        )
+                                    }
+                                },
+                                None => {
+                                    quote!(
+                                        #field_ident: {
+                                            #padding_deserialize
+                                            #field_deserialize
+                                        }
+                                    )
                                 }
-                            )
+                            }
                         }
                     });
 
