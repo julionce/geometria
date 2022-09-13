@@ -18,6 +18,7 @@ mod start_section;
 mod string;
 mod time;
 mod typecode;
+pub mod uuid;
 mod version;
 
 #[cfg(test)]
