@@ -20,26 +20,8 @@ impl BigChunkVersion {
             Self::Any => quote!().into(),
         }
     }
-}
 
-struct TableAttr {
-    typecode: Option<syn::Type>,
-}
-
-struct StructAttrs {
-    big_chunk_major_version: Option<BigChunkVersion>,
-    table: Option<TableAttr>,
-}
-
-impl StructAttrs {
-    fn new(attrs: &Vec<syn::Attribute>) -> Self {
-        Self {
-            big_chunk_major_version: Self::parse_big_chunk_major_version(attrs),
-            table: Self::parse_table(attrs),
-        }
-    }
-
-    fn parse_big_chunk_major_version(attrs: &Vec<syn::Attribute>) -> Option<BigChunkVersion> {
+    fn parse(version_kind: &'static str, attrs: &Vec<syn::Attribute>) -> Option<Self> {
         match attrs.iter().find(|a| a.path.is_ident("big_chunk_version")) {
             Some(attr) => {
                 if attr.tokens.is_empty() {
@@ -48,7 +30,7 @@ impl StructAttrs {
                     match attr.parse_args::<syn::ExprBinary>() {
                         Ok(expr) => match *expr.left {
                             syn::Expr::Path(path) => {
-                                if !path.path.is_ident("major") {
+                                if !path.path.is_ident(version_kind) {
                                     panic!()
                                 }
                                 match *expr.right {
@@ -80,6 +62,24 @@ impl StructAttrs {
                 }
             }
             None => None,
+        }
+    }
+}
+
+struct TableAttr {
+    typecode: Option<syn::Type>,
+}
+
+struct StructAttrs {
+    big_chunk_major_version: Option<BigChunkVersion>,
+    table: Option<TableAttr>,
+}
+
+impl StructAttrs {
+    fn new(attrs: &Vec<syn::Attribute>) -> Self {
+        Self {
+            big_chunk_major_version: BigChunkVersion::parse("major", attrs),
+            table: Self::parse_table(attrs),
         }
     }
 
