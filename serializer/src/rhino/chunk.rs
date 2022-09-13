@@ -1,5 +1,7 @@
 use std::io::{Read, Seek, SeekFrom};
 
+use geometria_derive::Deserialize;
+
 use super::deserialize::Deserialize;
 use super::deserializer::Deserializer;
 use super::typecode::{self, Typecode};
@@ -101,6 +103,7 @@ where
     }
 }
 
+#[derive(Deserialize)]
 pub struct BigVersion {
     inner: u8,
 }
@@ -115,16 +118,42 @@ impl BigVersion {
     }
 }
 
-impl<D> Deserialize<'_, D> for BigVersion
+pub struct NormalVersion {
+    major: i32,
+    minor: i32,
+}
+
+impl NormalVersion {
+    pub fn new(major: i32, minor: i32) -> Result<Self, String> {
+        if 0 > major {
+            Err("invalid major version".to_string())
+        } else if 0 > minor {
+            Err("invalid minor version".to_string())
+        } else {
+            Ok(Self { major, minor })
+        }
+    }
+
+    pub fn major(&self) -> i32 {
+        self.major
+    }
+
+    pub fn minor(&self) -> i32 {
+        self.minor
+    }
+}
+
+impl<D> Deserialize<'_, D> for NormalVersion
 where
     D: Deserializer,
 {
     type Error = String;
 
     fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
-        Ok(Self {
-            inner: u8::deserialize(deserializer)?,
-        })
+        Self::new(
+            i32::deserialize(deserializer)?,
+            i32::deserialize(deserializer)?,
+        )
     }
 }
 
