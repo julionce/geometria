@@ -14,6 +14,7 @@ mod properties;
 mod reader;
 pub mod revision_history;
 mod sequence;
+pub mod settings;
 mod start_section;
 mod string;
 mod time;

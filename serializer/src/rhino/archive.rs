@@ -2,7 +2,7 @@ use geometria_derive::Deserialize;
 
 use super::{
     comment::Comment, deserialize::Deserialize, deserializer::Deserializer, header::Header,
-    properties::Properties, start_section::StartSection, version::Version,
+    properties::Properties, settings::Settings, start_section::StartSection, version::Version,
 };
 
 #[derive(Deserialize)]
@@ -12,4 +12,5 @@ pub struct Archive {
     pub comment: Comment,
     pub start_section: StartSection,
     pub properties: Properties,
+    pub settings: Settings,
 }
