@@ -73,6 +73,7 @@ struct TableAttr {
 struct StructAttrs {
     big_chunk_major_version: Option<BigChunkVersion>,
     table: Option<TableAttr>,
+    normal_chunk: bool,
 }
 
 impl StructAttrs {
@@ -80,6 +81,7 @@ impl StructAttrs {
         Self {
             big_chunk_major_version: BigChunkVersion::parse("major", attrs),
             table: Self::parse_table(attrs),
+            normal_chunk: Self::parse_normal_chunk(attrs),
         }
     }
 
@@ -95,6 +97,13 @@ impl StructAttrs {
                 }
             }
             None => None,
+        }
+    }
+
+    fn parse_normal_chunk(attrs: &Vec<syn::Attribute>) -> bool {
+        match attrs.iter().find(|a| a.path.is_ident("normal_chunk")) {
+            Some(_) => true,
+            None => false,
         }
     }
 }
@@ -140,200 +149,236 @@ impl FieldAttrs {
 
 #[proc_macro_derive(
     Deserialize,
-    attributes(big_chunk_version, underlying_type, padding, table, table_field)
+    attributes(
+        big_chunk_version,
+        underlying_type,
+        padding,
+        table,
+        table_field,
+        normal_chunk
+    )
 )]
 pub fn deserialize_derive(input: TokenStream) -> TokenStream {
     let DeriveInput {
         ident, data, attrs, ..
     }: DeriveInput = parse_macro_input!(input as DeriveInput);
     match data {
-        Data::Struct(data_struct) => {
-            let struct_attrs = StructAttrs::new(&attrs);
-            match data_struct.fields {
-                Fields::Named(fields) => {
-                    let fields_iter = fields.named.iter().map(|named_field| {
-                        let field_attrs = FieldAttrs::new(named_field);
-                        let field_ident = named_field.ident.as_ref().unwrap();
-                        let field_ty = match &named_field.ty {
-                            syn::Type::Array(value) => {
-                                quote!(<#value>)
-                            },
-                            syn::Type::Path(value) => {
-                                quote!(#value)
-                            },
-                            _ => panic!()
-                        };
-                        let field_deserialize = if field_attrs.underlying_type.is_some() {
-                            let underlying_ty = &field_attrs.underlying_type.as_ref().unwrap();
-                            quote!(#field_ty::from(#underlying_ty::deserialize(deserializer)?))
-                        } else {
-                            quote!(#field_ty::deserialize(deserializer)?)
-                        };
-                        let padding_deserialize = if field_attrs.padding.is_some() {
-                            let padding = &field_attrs.padding.as_ref().unwrap();
-                            quote!(#padding::deserialize(deserializer)?;)
-                        } else {
-                            quote!()
-                        };
-                        if field_attrs.typecode.is_some() {
-                            let typecode = &field_attrs.typecode.as_ref().unwrap();
-                            match field_attrs.big_chunk_minor_version {
-                                Some(version) => match version {
-                                    BigChunkVersion::Any => {
-                                        quote!(
-                                            typecode::#typecode => {
-                                                #padding_deserialize
-                                                table.#field_ident = #field_deserialize;
-                                            }
-                                        )
-                                    }
-                                    BigChunkVersion::Eq(value)
-                                    | BigChunkVersion::Gt(value)
-                                    | BigChunkVersion::Lt(value)
-                                    | BigChunkVersion::Ne(value) => {
-                                        let quote_operator = version.quote_operator();
-                                        quote!(
-                                            typecode::#typecode => {
-                                                if chunk_version.minor() #quote_operator #value {
-                                                    #padding_deserialize
-                                                    table.#field_ident = #field_deserialize;
-                                                }
-                                            }
-                                        )
-                                    }
-                                },
-                                None => {
-                                    quote!(
-                                        typecode::#typecode => {
-                                            #padding_deserialize
-                                            table.#field_ident = #field_deserialize;
-                                        }
-                                    )
-                                }
-                            }
-                        } else {
-                            match field_attrs.big_chunk_minor_version {
-                                Some(version) => match version {
-                                    BigChunkVersion::Any => {
-                                        quote!(
-                                            #field_ident: {
-                                                #padding_deserialize
-                                                #field_deserialize
-                                            }
-                                        )
-                                    }
-                                    BigChunkVersion::Eq(value)
-                                    | BigChunkVersion::Gt(value)
-                                    | BigChunkVersion::Lt(value)
-                                    | BigChunkVersion::Ne(value) => {
-                                        let quote_operator = version.quote_operator();
-                                        quote!(
-                                            #field_ident: {
-                                                if chunk_version.minor() #quote_operator #value {
-                                                    #padding_deserialize
-                                                    #field_deserialize
-                                                } else {
-                                                    #field_ty::default()
-                                                }
-                                            }
-                                        )
-                                    }
-                                },
-                                None => {
-                                    quote!(
-                                        #field_ident: {
-                                            #padding_deserialize
-                                            #field_deserialize
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    });
+        Data::Struct(data_struct) => process_data_struct(&data_struct, &ident, &attrs),
+        _ => {
+            quote!()
+        }
+    }
+    .into()
+}
 
-                    let struct_deserialize = if struct_attrs.table.is_some() {
-                        if struct_attrs.table.as_ref().unwrap().typecode.is_some() {
-                            let typecode = struct_attrs.table.unwrap().typecode.unwrap();
-                            quote!(
-                                let mut table = Self::default();
-                                let mut properties_chunk = Chunk::deserialize(deserializer)?;
-                                if typecode::#typecode == properties_chunk.chunk_begin().typecode {
-                                    loop {
-                                        let mut chunk = Chunk::deserialize(&mut properties_chunk)?;
-                                        let deserializer = &mut chunk;
-                                        match deserializer.chunk_begin().typecode {
-                                            #(#fields_iter)*
-                                            _ => {
-                                                break;
-                                            }
-                                        }
-                                        chunk.seek(SeekFrom::End(1)).unwrap();
-                                    }
-                                }
-                                properties_chunk.seek(SeekFrom::End(1)).unwrap();
-                                Ok(table)
-                            )
-                        } else {
-                            quote!(
-                                let mut table = Self::default();
-                                loop {
-                                    let mut chunk = Chunk::deserialize(deserializer)?;
-                                    let deserializer = &mut chunk;
-                                    match deserializer.chunk_begin().typecode {
-                                        #(#fields_iter)*
-                                        _ => {
-                                            break;
-                                        }
-                                    }
-                                    chunk.seek(SeekFrom::End(1)).unwrap();
-                                }
-                                Ok(table)
-                            )
-                        }
-                    } else {
-                        quote!(Ok(Self {#(#fields_iter),*}))
-                    };
-
-                    let deserialize_body = match struct_attrs.big_chunk_major_version {
-                        Some(major_version) => match major_version {
+fn process_data_struct(
+    data: &syn::DataStruct,
+    ident: &syn::Ident,
+    attrs: &Vec<syn::Attribute>,
+) -> proc_macro2::TokenStream {
+    let struct_attrs = StructAttrs::new(&attrs);
+    match &data.fields {
+        Fields::Named(fields) => {
+            let fields_iter = fields.named.iter().map(|named_field| {
+                let field_attrs = FieldAttrs::new(named_field);
+                let field_ident = named_field.ident.as_ref().unwrap();
+                let field_ty = match &named_field.ty {
+                    syn::Type::Array(value) => {
+                        quote!(<#value>)
+                    }
+                    syn::Type::Path(value) => {
+                        quote!(#value)
+                    }
+                    _ => panic!(),
+                };
+                let field_deserialize = if field_attrs.underlying_type.is_some() {
+                    let underlying_ty = &field_attrs.underlying_type.as_ref().unwrap();
+                    quote!(#field_ty::from(#underlying_ty::deserialize(deserializer)?))
+                } else {
+                    quote!(#field_ty::deserialize(deserializer)?)
+                };
+                let padding_deserialize = if field_attrs.padding.is_some() {
+                    let padding = &field_attrs.padding.as_ref().unwrap();
+                    quote!(#padding::deserialize(deserializer)?;)
+                } else {
+                    quote!()
+                };
+                if field_attrs.typecode.is_some() {
+                    let typecode = &field_attrs.typecode.as_ref().unwrap();
+                    match field_attrs.big_chunk_minor_version {
+                        Some(version) => match version {
                             BigChunkVersion::Any => {
                                 quote!(
-                                    let _chunk_version = chunk::BigVersion::deserialize(deserializer)?;
-                                    #struct_deserialize
+                                    typecode::#typecode => {
+                                        #padding_deserialize
+                                        table.#field_ident = #field_deserialize;
+                                    }
                                 )
                             }
                             BigChunkVersion::Eq(value)
                             | BigChunkVersion::Gt(value)
                             | BigChunkVersion::Lt(value)
                             | BigChunkVersion::Ne(value) => {
-                                let quote_operator = major_version.quote_operator();
+                                let quote_operator = version.quote_operator();
                                 quote!(
-                                    let chunk_version = chunk::BigVersion::deserialize(deserializer)?;
-                                    if chunk_version.major() #quote_operator #value {
-                                        #struct_deserialize
-                                    } else {
-                                        Ok(Self::default())
+                                    typecode::#typecode => {
+                                        if chunk_version.minor() #quote_operator #value {
+                                            #padding_deserialize
+                                            table.#field_ident = #field_deserialize;
+                                        }
                                     }
                                 )
                             }
                         },
-                        None => quote!(
-                            #struct_deserialize
-                        ),
-                    };
-                    quote! {
-                        impl<'de, D> Deserialize<'de, D> for #ident where D: Deserializer,
-                        {
-                            type Error = String;
-
-                            fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
-                                #deserialize_body
+                        None => {
+                            quote!(
+                                typecode::#typecode => {
+                                    #padding_deserialize
+                                    table.#field_ident = #field_deserialize;
+                                }
+                            )
+                        }
+                    }
+                } else {
+                    match field_attrs.big_chunk_minor_version {
+                        Some(version) => match version {
+                            BigChunkVersion::Any => {
+                                quote!(
+                                    #field_ident: {
+                                        #padding_deserialize
+                                        #field_deserialize
+                                    }
+                                )
                             }
+                            BigChunkVersion::Eq(value)
+                            | BigChunkVersion::Gt(value)
+                            | BigChunkVersion::Lt(value)
+                            | BigChunkVersion::Ne(value) => {
+                                let quote_operator = version.quote_operator();
+                                quote!(
+                                    #field_ident: {
+                                        if chunk_version.minor() #quote_operator #value.into() {
+                                            #padding_deserialize
+                                            #field_deserialize
+                                        } else {
+                                            #field_ty::default()
+                                        }
+                                    }
+                                )
+                            }
+                        },
+                        None => {
+                            quote!(
+                                #field_ident: {
+                                    #padding_deserialize
+                                    #field_deserialize
+                                }
+                            )
                         }
                     }
                 }
-                _ => {
-                    quote!()
+            });
+
+            let struct_deserialize = if struct_attrs.table.is_some() {
+                if struct_attrs.table.as_ref().unwrap().typecode.is_some() {
+                    let typecode = struct_attrs.table.unwrap().typecode.unwrap();
+                    quote!(
+                        let mut table = Self::default();
+                        let mut properties_chunk = Chunk::deserialize(deserializer)?;
+                        if typecode::#typecode == properties_chunk.chunk_begin().typecode {
+                            loop {
+                                let mut chunk = Chunk::deserialize(&mut properties_chunk)?;
+                                let deserializer = &mut chunk;
+                                match deserializer.chunk_begin().typecode {
+                                    #(#fields_iter)*
+                                    typecode::ENDOFTABLE => {
+                                        break;
+                                    }
+                                    _ => {
+                                    }
+                                }
+                                chunk.seek(SeekFrom::End(1)).unwrap();
+                            }
+                        }
+                        properties_chunk.seek(SeekFrom::End(1)).unwrap();
+                        Ok(table)
+                    )
+                } else {
+                    quote!(
+                        let mut table = Self::default();
+                        loop {
+                            let mut chunk = Chunk::deserialize(deserializer)?;
+                            let deserializer = &mut chunk;
+                            match deserializer.chunk_begin().typecode {
+                                #(#fields_iter)*
+                                _ => {
+                                    break;
+                                }
+                            }
+                            chunk.seek(SeekFrom::End(1)).unwrap();
+                        }
+                        Ok(table)
+                    )
+                }
+            } else {
+                quote!(Ok(Self {#(#fields_iter),*}))
+            };
+
+            let chunk_deserialize = if struct_attrs.normal_chunk {
+                quote!(
+                    let mut chunk = chunk::Chunk::deserialize(deserializer)?;
+                    let deserializer = &mut chunk;
+                )
+            } else {
+                quote!()
+            };
+
+            let chunk_version_type = if struct_attrs.normal_chunk {
+                quote!(NormalVersion)
+            } else {
+                quote!(BigVersion)
+            };
+
+            let deserialize_body = match struct_attrs.big_chunk_major_version {
+                Some(major_version) => match major_version {
+                    BigChunkVersion::Any => {
+                        quote!(
+                            #chunk_deserialize
+                            let _chunk_version = chunk::#chunk_version_type::deserialize(deserializer)?;
+                            #struct_deserialize
+                        )
+                    }
+                    BigChunkVersion::Eq(value)
+                    | BigChunkVersion::Gt(value)
+                    | BigChunkVersion::Lt(value)
+                    | BigChunkVersion::Ne(value) => {
+                        let quote_operator = major_version.quote_operator();
+                        quote!(
+                            #chunk_deserialize
+                            let chunk_version = chunk::#chunk_version_type::deserialize(deserializer)?;
+                            if chunk_version.major() #quote_operator #value.into() {
+                                #struct_deserialize
+                            } else {
+                                Ok(Self::default())
+                            }
+                        )
+                    }
+                },
+                None => {
+                    quote!(
+                        #chunk_deserialize
+                        #struct_deserialize
+                    )
+                }
+            };
+            quote! {
+                impl<'de, D> Deserialize<'de, D> for #ident where D: Deserializer,
+                {
+                    type Error = String;
+
+                    fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
+                        #deserialize_body
+                    }
                 }
             }
         }
@@ -341,7 +386,6 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
             quote!()
         }
     }
-    .into()
 }
 
 #[cfg(test)]
