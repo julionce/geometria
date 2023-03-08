@@ -1,5 +1,6 @@
 use super::{deserialize::Deserialize, deserializer::Deserializer};
 
+#[derive(Default)]
 pub struct Sequence<T> {
     pub data: Vec<T>,
 }

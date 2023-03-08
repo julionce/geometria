@@ -60,15 +60,19 @@ where
     type Error = String;
 
     fn deserialize(deserializer: &mut D) -> Result<Self, Self::Error> {
-        let length = u32::deserialize(deserializer)? - 1;
-        let mut buf: Vec<u16> = vec![];
-        for _ in 0..length {
-            buf.push(u16::deserialize(deserializer)?);
-        }
-        u16::deserialize(deserializer)?;
-        match String::from_utf16(&buf) {
-            Ok(string) => Ok(Self(string)),
-            Err(e) => Err(e.to_string()),
+        let length = u32::deserialize(deserializer)?;
+        if 0 < length {
+            let mut buf: Vec<u16> = vec![];
+            for _ in 0..(length - 1) {
+                buf.push(u16::deserialize(deserializer)?);
+            }
+            u16::deserialize(deserializer)?;
+            match String::from_utf16(&buf) {
+                Ok(string) => Ok(Self(string)),
+                Err(e) => Err(e.to_string()),
+            }
+        } else {
+            Ok(Self(String::new()))
         }
     }
 }
