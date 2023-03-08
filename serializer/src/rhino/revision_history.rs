@@ -27,9 +27,9 @@ pub struct RevisionHistoryV1 {
 pub struct RevisionHistoryV2 {
     #[underlying_type(WStringWithLength)]
     pub created_by: String,
+    pub create_time: Time,
     #[underlying_type(WStringWithLength)]
     pub last_edited_by: String,
-    pub create_time: Time,
     pub last_edit_time: Time,
     pub revision_count: i32,
 }
