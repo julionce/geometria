@@ -47,6 +47,35 @@ impl_deserialize_for_number! {u128, read_u128}
 impl_deserialize_for_number! {f32, read_f32}
 impl_deserialize_for_number! {f64, read_f64}
 
+impl Deserialize for String
+where
+    Self: Sized,
+{
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
+    where
+        D: Deserializer,
+    {
+        let length = i32::deserialize(deserializer)?;
+        if 0 > length {
+            Err("invalid string length".to_string())
+        } else {
+            let mut string = String::new();
+            match deserializer.take(length as u64).read_to_string(&mut string) {
+                Ok(size) => {
+                    if size as u64 == length as u64 {
+                        Ok(string)
+                    } else {
+                        Err("invalid string length".to_string())
+                    }
+                }
+                Err(e) => Err(format!("{}", e)),
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;
