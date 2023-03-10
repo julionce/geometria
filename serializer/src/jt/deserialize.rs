@@ -1,4 +1,6 @@
-use crate::common::reader::NumberReader;
+use std::io::Read;
+
+use super::deserializer::Deserializer;
 
 trait Deserialize
 where
@@ -6,9 +8,9 @@ where
 {
     type Error;
 
-    fn deserialize<R>(reader: &mut R) -> Result<Self, Self::Error>
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
     where
-        R: NumberReader;
+        D: Deserializer;
 }
 
 macro_rules! impl_deserialize_for_number {
@@ -19,11 +21,11 @@ macro_rules! impl_deserialize_for_number {
         {
             type Error = String;
 
-            fn deserialize<R>(reader: &mut R) -> Result<Self, Self::Error>
+            fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
             where
-                R: NumberReader,
+                D: Deserializer,
             {
-                match reader.$method() {
+                match deserializer.$method() {
                     Ok(v) => Ok(v),
                     Err(e) => Err(e.to_string()),
                 }
@@ -67,10 +69,10 @@ mod tests {
             #[test]
             fn $test_name() {
                 let data = $value.to_be_bytes();
-                let mut reader = BigEndianNumberReader {
+                let mut deserializer = BigEndianNumberReader {
                     source: Cursor::new(data),
                 };
-                assert_eq!($value, <$type>::deserialize(&mut reader).unwrap());
+                assert_eq!($value, <$type>::deserialize(&mut deserializer).unwrap());
             }
         };
     }
@@ -80,10 +82,10 @@ mod tests {
             #[test]
             fn $test_name() {
                 let data = $value.to_le_bytes();
-                let mut reader = LittleEndianNumberReader {
+                let mut deserializer = LittleEndianNumberReader {
                     source: Cursor::new(data),
                 };
-                assert_eq!($value, <$type>::deserialize(&mut reader).unwrap());
+                assert_eq!($value, <$type>::deserialize(&mut deserializer).unwrap());
             }
         };
     }
