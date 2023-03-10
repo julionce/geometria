@@ -76,6 +76,30 @@ where
     }
 }
 
+impl<T> Deserialize for Vec<T>
+where
+    T: Deserialize,
+    String: From<<T as Deserialize>::Error>,
+{
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
+    where
+        D: Deserializer,
+    {
+        let length = i32::deserialize(deserializer)?;
+        if 0 > length {
+            Err("invalid vector length".to_string())
+        } else {
+            let mut vector: Vec<T> = vec![];
+            for _ in 0..length {
+                vector.push(T::deserialize(deserializer)?);
+            }
+            Ok(vector)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;
