@@ -1,4 +1,4 @@
-use geometria_derive::Deserialize;
+use geometria_derive::RhinoDeserialize;
 
 use super::{
     bool::BoolFromI32,
@@ -9,7 +9,7 @@ use super::{
     version::Version,
 };
 
-#[derive(Default, Deserialize)]
+#[derive(Default, RhinoDeserialize)]
 pub struct NotesV1 {
     pub visible: i32,
     pub window_left: i32,
@@ -20,7 +20,7 @@ pub struct NotesV1 {
     pub data: String,
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Default, RhinoDeserialize)]
 #[big_chunk_version(major == 1)]
 pub struct NotesV2 {
     #[underlying_type(BoolFromI32)]

@@ -1,4 +1,4 @@
-use geometria_derive::Deserialize;
+use geometria_derive::RhinoDeserialize;
 
 use std::io::{Seek, SeekFrom};
 
@@ -7,24 +7,24 @@ use super::{
     sequence::Sequence, string::WStringWithLength, typecode,
 };
 
-#[derive(Default, Deserialize)]
+#[derive(Default, RhinoDeserialize)]
 #[big_chunk_version(major > 1)]
 #[normal_chunk]
 pub struct PlugIn {}
 
 type PlugInList = Sequence<PlugIn>;
 
-#[derive(Default, Deserialize)]
+#[derive(Default, RhinoDeserialize)]
 pub struct UnitsAndTolerances {}
 
-#[derive(Default, Deserialize)]
+#[derive(Default, RhinoDeserialize)]
 #[big_chunk_version(major == 1)]
 pub struct MeshParameters {
     #[underlying_type(BoolFromI32)]
     pub compute_curvature: bool,
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Default, RhinoDeserialize)]
 #[big_chunk_version(major == 1)]
 pub struct Annotation {
     pub dim_scale: f64,
@@ -57,19 +57,19 @@ pub struct Annotation {
     pub enable_layout_space_annotation_scaling: u8,
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Default, RhinoDeserialize)]
 #[big_chunk_version(major == 1)]
 pub struct Attributes {
     pub line_type_display_scale: f64,
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Default, RhinoDeserialize)]
 pub struct CurrentColor {
     pub color: i32,
     pub source: i32,
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Default, RhinoDeserialize)]
 #[table(SETTINGS_TABLE)]
 pub struct Settings {
     #[table_field(SETTINGS_PLUGINLIST)]

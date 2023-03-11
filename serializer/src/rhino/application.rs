@@ -1,10 +1,10 @@
-use geometria_derive::Deserialize;
+use geometria_derive::RhinoDeserialize;
 
 use super::{
     chunk, deserialize::Deserialize, deserializer::Deserializer, string::WStringWithLength,
 };
 
-#[derive(Default, Deserialize)]
+#[derive(Default, RhinoDeserialize)]
 #[big_chunk_version]
 pub struct Application {
     #[underlying_type(WStringWithLength)]

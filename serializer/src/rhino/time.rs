@@ -1,7 +1,7 @@
 use super::{deserialize::Deserialize, deserializer::Deserializer};
-use geometria_derive::Deserialize;
+use geometria_derive::RhinoDeserialize;
 
-#[derive(Default, Deserialize)]
+#[derive(Default, RhinoDeserialize)]
 pub struct Time {
     pub second: u32,
     pub minute: u32,

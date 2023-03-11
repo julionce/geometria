@@ -1,11 +1,11 @@
-use geometria_derive::Deserialize;
+use geometria_derive::RhinoDeserialize;
 
 use super::{
     comment::Comment, deserialize::Deserialize, deserializer::Deserializer, header::Header,
     properties::Properties, settings::Settings, start_section::StartSection, version::Version,
 };
 
-#[derive(Deserialize)]
+#[derive(RhinoDeserialize)]
 pub struct Archive {
     pub header: Header,
     pub version: Version,

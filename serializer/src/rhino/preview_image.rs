@@ -1,13 +1,13 @@
-use geometria_derive::Deserialize;
+use geometria_derive::RhinoDeserialize;
 
 use super::{deserialize::Deserialize, deserializer::Deserializer};
 
-#[derive(Default, Deserialize)]
+#[derive(Default, RhinoDeserialize)]
 pub struct PreviewImage {
     // TODO
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Default, RhinoDeserialize)]
 pub struct CompressedPreviewImage {
     // TODO
 }

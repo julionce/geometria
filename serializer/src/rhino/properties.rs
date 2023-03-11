@@ -1,4 +1,4 @@
-use geometria_derive::Deserialize;
+use geometria_derive::RhinoDeserialize;
 use std::io::{Seek, SeekFrom};
 
 use super::{
@@ -8,7 +8,7 @@ use super::{
     typecode, version::Version,
 };
 
-#[derive(Default, Deserialize)]
+#[derive(Default, RhinoDeserialize)]
 #[table]
 pub struct PropertiesV1 {
     #[table_field(COMMENTBLOCK)]
@@ -21,7 +21,7 @@ pub struct PropertiesV1 {
     preview_image: PreviewImage,
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Default, RhinoDeserialize)]
 #[table(PROPERTIES_TABLE)]
 pub struct PropertiesV2 {
     #[table_field(PROPERTIES_AS_FILE_NAME)]

@@ -1,4 +1,4 @@
-use geometria_derive::Deserialize;
+use geometria_derive::RhinoDeserialize;
 
 use super::{
     chunk,
@@ -9,7 +9,7 @@ use super::{
     version::Version,
 };
 
-#[derive(Default, Deserialize)]
+#[derive(Default, RhinoDeserialize)]
 pub struct RevisionHistoryV1 {
     #[underlying_type(StringWithLength)]
     pub created_by: String,
@@ -22,7 +22,7 @@ pub struct RevisionHistoryV1 {
     pub revision_count: i32,
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Default, RhinoDeserialize)]
 #[big_chunk_version(major == 1)]
 pub struct RevisionHistoryV2 {
     #[underlying_type(WStringWithLength)]

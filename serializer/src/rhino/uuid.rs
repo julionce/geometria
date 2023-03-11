@@ -1,8 +1,8 @@
-use geometria_derive::Deserialize;
+use geometria_derive::RhinoDeserialize;
 
 use super::{deserialize::Deserialize, deserializer::Deserializer};
 
-#[derive(Deserialize)]
+#[derive(RhinoDeserialize)]
 pub struct Uuid {
     pub data1: u32,
     pub data2: u16,

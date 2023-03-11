@@ -1,6 +1,6 @@
 use std::io::{Read, Seek, SeekFrom};
 
-use geometria_derive::Deserialize;
+use geometria_derive::RhinoDeserialize;
 
 use super::deserialize::Deserialize;
 use super::deserializer::Deserializer;
@@ -103,7 +103,7 @@ where
     }
 }
 
-#[derive(Deserialize)]
+#[derive(RhinoDeserialize)]
 pub struct BigVersion {
     inner: u8,
 }
