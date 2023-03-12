@@ -100,6 +100,25 @@ where
     }
 }
 
+impl<T, const N: usize> Deserialize for [T; N]
+where
+    T: Deserialize + Default + Copy,
+    String: From<<T as Deserialize>::Error>,
+{
+    type Error = String;
+
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
+    where
+        D: Deserializer,
+    {
+        let mut rv: Self = [T::default(); N];
+        for i in 0..N {
+            rv[i] = T::deserialize(deserializer)?;
+        }
+        Ok(rv)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;
