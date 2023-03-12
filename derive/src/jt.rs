@@ -38,6 +38,32 @@ pub fn process_data_struct(
                 }
             }
         }
+        Fields::Unnamed(fields) => {
+            let fields_iter = fields.unnamed.iter().map(|field| {
+                let field_ty = match &field.ty {
+                    syn::Type::Array(value) => {
+                        quote!(<#value>)
+                    }
+                    syn::Type::Path(value) => {
+                        quote!(#value)
+                    }
+                    _ => panic!(),
+                };
+                quote!(#field_ty::deserialize(deserializer)?)
+            });
+            quote! {
+                impl Deserialize for #ident
+                {
+                    type Error = String;
+
+                    fn deserialize<D>(deserializer: &mut D) -> Result<Self, Self::Error>
+                    where D: Deserializer
+                    {
+                        Ok(Self (#(#fields_iter), *))
+                    }
+                }
+            }
+        }
         _ => {
             quote!()
         }
