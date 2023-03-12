@@ -2,6 +2,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, Data, DeriveInput};
 
+mod jt;
 mod rhino;
 
 #[proc_macro_derive(
@@ -21,6 +22,20 @@ pub fn rhino_deserialize_derive(input: TokenStream) -> TokenStream {
     }: DeriveInput = parse_macro_input!(input as DeriveInput);
     match data {
         Data::Struct(data_struct) => rhino::process_data_struct(&data_struct, &ident, &attrs),
+        _ => {
+            quote!()
+        }
+    }
+    .into()
+}
+
+#[proc_macro_derive(JtDeserialize, attributes())]
+pub fn jt_deserialize_derive(input: TokenStream) -> TokenStream {
+    let DeriveInput {
+        ident, data, attrs, ..
+    }: DeriveInput = parse_macro_input!(input as DeriveInput);
+    match data {
+        Data::Struct(data_struct) => jt::process_data_struct(&data_struct, &ident, &attrs),
         _ => {
             quote!()
         }
