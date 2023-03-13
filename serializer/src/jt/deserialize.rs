@@ -2,7 +2,7 @@ use std::io::Read;
 
 use super::deserializer::Deserializer;
 
-trait Deserialize
+pub trait Deserialize
 where
     Self: Sized,
 {
