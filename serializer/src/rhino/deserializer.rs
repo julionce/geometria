@@ -1,10 +1,11 @@
+use once_io::OStream;
+
 use super::chunk;
 use super::version::Version;
-use std::{io::Read, io::Seek};
 
 pub trait Deserializer
 where
-    Self: Sized + Read + Seek,
+    Self: Sized + OStream,
 {
     fn deserialize_bytes(&mut self, buf: &mut [u8]) -> Result<(), String>;
 

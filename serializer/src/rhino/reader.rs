@@ -2,11 +2,12 @@ use super::chunk;
 use super::deserializer::Deserializer;
 use super::version::Version;
 
+use once_io::OStream;
 use std::{io::Read, io::Seek, io::SeekFrom};
 
 pub struct Reader<T>
 where
-    T: Read + Seek,
+    T: OStream,
 {
     pub stream: T,
     pub version: Version,
@@ -15,7 +16,7 @@ where
 
 impl<T> Read for Reader<T>
 where
-    T: Read + Seek,
+    T: OStream,
 {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         self.stream.read(buf)
@@ -24,7 +25,7 @@ where
 
 impl<T> Seek for Reader<T>
 where
-    T: Read + Seek,
+    T: OStream,
 {
     fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
         self.stream.seek(pos)
@@ -33,7 +34,7 @@ where
 
 impl<T> Deserializer for Reader<T>
 where
-    T: Read + Seek,
+    T: OStream,
 {
     fn deserialize_bytes(&mut self, buf: &mut [u8]) -> Result<(), String> {
         match self.read_exact(buf) {

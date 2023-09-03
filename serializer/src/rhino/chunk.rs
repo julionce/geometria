@@ -1,3 +1,4 @@
+use once_io::OStream;
 use std::io::{Read, Seek, SeekFrom};
 
 use geometria_derive::RhinoDeserialize;
@@ -159,7 +160,7 @@ where
 
 pub struct Chunk<'a, T>
 where
-    T: Read + Seek,
+    T: OStream,
 {
     stream: &'a mut T,
     offset: u64,
@@ -203,7 +204,7 @@ impl PartialEq<std::io::Error> for ChunkError {
 
 impl<'a, T> Chunk<'a, T>
 where
-    T: Read + Seek,
+    T: OStream,
 {
     pub fn new(
         stream: &'a mut T,
@@ -251,7 +252,7 @@ where
 
 impl<'a, T> Read for Chunk<'a, T>
 where
-    T: Read + Seek,
+    T: OStream,
 {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let length = std::cmp::min(self.remainder_length()? as usize, buf.len());
@@ -261,7 +262,7 @@ where
 
 impl<'a, T> Seek for Chunk<'a, T>
 where
-    T: Read + Seek,
+    T: OStream,
 {
     fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
         let final_position: Option<u64> = match pos {
@@ -301,7 +302,7 @@ where
 
 impl<'a, T> Deserializer for Chunk<'a, T>
 where
-    T: Read + Seek,
+    T: OStream,
 {
     fn deserialize_bytes(&mut self, buf: &mut [u8]) -> Result<(), String> {
         match self.read_exact(buf) {
