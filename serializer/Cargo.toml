@@ -6,3 +6,4 @@ exclude = ["tests/resources/"]
 
 [dependencies]
 geometria_derive = { path = "../derive" }
+once_io = { git = "https://github.com/julionce/once_io" }
